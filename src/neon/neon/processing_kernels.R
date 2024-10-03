@@ -2,125 +2,82 @@
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
-process_0_DP1.20093 <- function(set_details, network, domain){
-    # set_details=s
+process_0_DP1.20093.001 <- function(set_details, network, domain){
 
-    data_pile <- try(neonUtilities::loadByProduct(set_details$prodcode_full,
-        site=set_details$site_code, startdate=set_details$component,
-        enddate=set_details$component, package='basic', check.size=FALSE),
-        silent = TRUE)
-    # write_lines(data_pile$readme_20093$X1, '/tmp/chili.txt')
+    result <- neon_retrieve(set_details, network, domain)
 
-    if(class(data_pile) == 'try-error'){
-        return(generate_ms_exception(glue('Data unavailable for {p} {s} {c}',
-                                          p = set_details$prodname_ms,
-                                          s = set_details$site_code,
-                                          c = set_details$component)))
+    if(inherits(result, 'try-error')){
+        return(generate_ms_exception(glue('Data unavailable for {p} {s}',
+                                          p = prodname_ms,
+                                          s = set_details$site_code)))
     }
-
-    raw_data_dest <- glue('{wd}/data/{n}/{d}/raw/{p}/{s}/{c}',
-        wd=getwd(), n=network, d=domain, p=set_details$prodname_ms,
-        s=set_details$site_code, c=set_details$component)
-
-    serialize_list_to_dir(data_pile, raw_data_dest)
 
     return()
 }
 
-#stream_nitrate: STATUS=PAUSED
+#stream_nitrate: STATUS=READY
 #. handle_errors
-process_0_DP1.20033 <- function(set_details, network, domain){
+process_0_DP1.20033.001 <- function(set_details, network, domain){
 
-    data_pile <- try(neonUtilities::loadByProduct(set_details$prodcode_full,
-        site=set_details$site_code, startdate=set_details$component,
-        enddate=set_details$component, package='basic', check.size=FALSE),
-        silent = TRUE)
+    result <- neon_retrieve(set_details, network, domain, time_index = '15')
 
-    if(class(data_pile) == 'try-error'){
-      return(generate_ms_exception(glue('Data unavailable for {p} {s} {c}',
-                                        p = set_details$prodname_ms,
-                                        s = set_details$site_code,
-                                        c = set_details$component)))
+    if(inherits(result, 'try-error')){
+        return(generate_ms_exception(glue('Data unavailable for {p} {s}',
+                                          p = prodname_ms,
+                                          s = set_details$site_code)))
     }
-
-    raw_data_dest <- glue('{wd}/data/{n}/{d}/raw/{p}/{s}/{c}',
-        wd=getwd(), n=network, d=domain, p=set_details$prodname_ms,
-        s=set_details$site_code, c=set_details$component)
-
-    serialize_list_to_dir(data_pile, raw_data_dest)
 
     return()
 }
 
-#stream_PAR: STATUS=PAUSED
+#stream_PAR: STATUS=READY
 #. handle_errors
-process_0_DP1.20042 <- function(set_details, network, domain){
+process_0_DP1.20042.001 <- function(set_details, network, domain){
 
-    data_pile <- try(neonUtilities::loadByProduct(set_details$prodcode_full,
-        site=set_details$site_code, startdate=set_details$component,
-        enddate=set_details$component, package='basic', check.size=FALSE, avg=5),
-        silent = TRUE)
+    result <- neon_retrieve(set_details, network, domain, time_index = '30')
 
-    if(class(data_pile) == 'try-error'){
-      return(generate_ms_exception(glue('Data unavailable for {p} {s} {c}',
-                                        p = set_details$prodname_ms,
-                                        s = set_details$site_code,
-                                        c = set_details$component)))
+    if(inherits(result, 'try-error')){
+        return(generate_ms_exception(glue('Data unavailable for {p} {s}',
+                                          p = prodname_ms,
+                                          s = set_details$site_code)))
     }
-
-    raw_data_dest <- glue('{wd}/data/{n}/{d}/raw/{p}/{s}/{c}',
-        wd=getwd(), n=network, d=domain, p=set_details$prodname_ms,
-        s=set_details$site_code, c=set_details$component)
-
-    serialize_list_to_dir(data_pile, raw_data_dest)
 
     return()
 }
 
-#stream_temperature: STATUS=PAUSED
+#stream_temperature: STATUS=READY
 #. handle_errors
-process_0_DP1.20053 <- function(set_details, network, domain){
+process_0_DP1.20053.001 <- function(set_details, network, domain){
 
-    data_pile <- try(neonUtilities::loadByProduct(set_details$prodcode_full,
-        site=set_details$site_code, startdate=set_details$component,
-        enddate=set_details$component, package='basic', check.size=FALSE, avg=5),
-        silent = TRUE)
+    result <- neon_retrieve(set_details, network, domain, time_index = '30')
 
-    if(class(data_pile) == 'try-error'){
-      return(generate_ms_exception(glue('Data unavailable for {p} {s} {c}',
-                                        p = set_details$prodname_ms,
-                                        s = set_details$site_code,
-                                        c = set_details$component)))
+    if(inherits(result, 'try-error')){
+        return(generate_ms_exception(glue('Data unavailable for {p} {s}',
+                                          p = prodname_ms,
+                                          s = set_details$site_code)))
     }
 
-    raw_data_dest <- glue('{wd}/data/{n}/{d}/raw/{p}/{s}/{c}',
-        wd=getwd(), n=network, d=domain, p=set_details$prodname_ms,
-        s=set_details$site_code, c=set_details$component)
-
-    serialize_list_to_dir(data_pile, raw_data_dest)
-
-    return()
-}
+    return()}
 
 #air_pressure: STATUS=PAUSED
 #. handle_errors
 process_0_DP1.00004 <- function(set_details, network, domain){
 
     data_pile <- try(neonUtilities::loadByProduct(set_details$prodcode_full,
-        site=set_details$site_code, startdate=set_details$component,
-        enddate=set_details$component, package='basic', check.size=FALSE, avg=30),
-        silent = TRUE)
+                                                  site=set_details$site_code, startdate=set_details$component,
+                                                  enddate=set_details$component, package='basic', check.size=FALSE, avg=30),
+                     silent = TRUE)
 
     if(class(data_pile) == 'try-error'){
-      return(generate_ms_exception(glue('Data unavailable for {p} {s} {c}',
-                                        p = set_details$prodname_ms,
-                                        s = set_details$site_code,
-                                        c = set_details$component)))
+        return(generate_ms_exception(glue('Data unavailable for {p} {s}',
+                                          p = prodname_ms,
+                                          s = set_details$site_code,
+                                          c = set_details$component)))
     }
 
     raw_data_dest <- glue('{wd}/data/{n}/{d}/raw/{p}/{s}/{c}',
-        wd=getwd(), n=network, d=domain, p=set_details$prodname_ms,
-        s=set_details$site_code, c=set_details$component)
+                          wd=getwd(), n=network, d=domain, p=prodname_ms,
+                          s=set_details$site_code, c=set_details$component)
 
     serialize_list_to_dir(data_pile, raw_data_dest)
 
@@ -131,27 +88,17 @@ process_0_DP1.00004 <- function(set_details, network, domain){
     return()
 }
 
-#stream_gases: STATUS=PAUSED
+#stream_gases: STATUS=READY
 #. handle_errors
-process_0_DP1.20097 <- function(set_details, network, domain){
+process_0_DP1.20097.001 <- function(set_details, network, domain){
 
-    data_pile <- try(neonUtilities::loadByProduct(set_details$prodcode_full,
-        site=set_details$site_code, startdate=set_details$component,
-        enddate=set_details$component, package='basic', check.size=FALSE),
-        silent = TRUE)
+    result <- neon_retrieve(set_details, network, domain)
 
-    if(class(data_pile) == 'try-error'){
-      return(generate_ms_exception(glue('Data unavailable for {p} {s} {c}',
-                                        p = set_details$prodname_ms,
-                                        s = set_details$site_code,
-                                        c = set_details$component)))
+    if(inherits(result, 'try-error')){
+        return(generate_ms_exception(glue('Data unavailable for {p} {s}',
+                                          p = prodname_ms,
+                                          s = set_details$site_code)))
     }
-
-    raw_data_dest <- glue('{wd}/data/{n}/{d}/raw/{p}/{s}/{c}',
-        wd=getwd(), n=network, d=domain, p=set_details$prodname_ms,
-        s=set_details$site_code, c=set_details$component)
-
-    serialize_list_to_dir(data_pile, raw_data_dest)
 
     return()
 }
@@ -171,15 +118,15 @@ process_0_DP1.20016 <- function(set_details, network, domain){
                                                   avg=5))
 
     if(class(data_pile) == 'try-error'){
-      return(generate_ms_exception(glue('Data unavailable for {p} {s} {c}',
-                                        p = set_details$prodname_ms,
-                                        s = set_details$site_code,
-                                        c = set_details$component)))
+        return(generate_ms_exception(glue('Data unavailable for {p} {s}',
+                                          p = prodname_ms,
+                                          s = set_details$site_code,
+                                          c = set_details$component)))
     }
 
     raw_data_dest = glue('{wd}/data/{n}/{d}/raw/{p}/{s}/{c}',
-        wd=getwd(), n=network, d=domain, p=set_details$prodname_ms,
-        s=set_details$site_code, c=set_details$component)
+                         wd=getwd(), n=network, d=domain, p=prodname_ms,
+                         s=set_details$site_code, c=set_details$component)
 
     serialize_list_to_dir(data_pile, raw_data_dest)
 
@@ -208,113 +155,149 @@ process_0_DP1.20016 <- function(set_details, network, domain){
     return()
 }
 
-#stream_quality: STATUS=PAUSED
+#stream_quality: STATUS=READY
 #. handle_errors
-process_0_DP1.20288 <- function(set_details, network, domain){
+process_0_DP1.20288.001 <- function(set_details, network, domain){
 
-    data_pile <- try(neonUtilities::loadByProduct(set_details$prodcode_full,
-        site=set_details$site_code, startdate=set_details$component,
-        enddate=set_details$component, package='basic', check.size=FALSE),
-        silent = TRUE)
+    #should have timeIndex options, but getTimeIndex returns c(0, 0, 100)
+    #and they all give the same result (2024-02-21)
+    result <- neon_retrieve(set_details, network, domain)
 
-    if(class(data_pile) == 'try-error'){
-      return(generate_ms_exception(glue('Data unavailable for {p} {s} {c}',
-                                        p = set_details$prodname_ms,
-                                        s = set_details$site_code,
-                                        c = set_details$component)))
+    if(inherits(result, 'try-error')){
+        return(generate_ms_exception(glue('Data unavailable for {p} {s}',
+                                          p = prodname_ms,
+                                          s = set_details$site_code)))
     }
-
-    raw_data_dest <- glue('{wd}/data/{n}/{d}/raw/{p}/{s}/{c}',
-        wd=getwd(), n=network, d=domain, p=set_details$prodname_ms,
-        s=set_details$site_code, c=set_details$component)
-
-    serialize_list_to_dir(data_pile, raw_data_dest)
 
     return()
 }
 
 #precipitation: STATUS=READY
 #. handle_errors
-process_0_DP1.00006 <- function(set_details, network, domain){
+process_0_DP1.00006.001 <- function(set_details, network, domain){
 
-    data_pile <- try(neonUtilities::loadByProduct(set_details$prodcode_full,
-                                             site=set_details$site_code, startdate=set_details$component,
-                                             enddate=set_details$component, package='basic', check.size=FALSE),
-                     silent = TRUE)
+    # pgauge <- terr_aquat_sitemap[[set_details$site_code]]
 
-    if(class(data_pile) == 'try-error'){
-      return(generate_ms_exception(glue('Data unavailable for {p} {s} {c}',
-                                        p = set_details$prodname_ms,
-                                        s = set_details$site_code,
-                                        c = set_details$component)))
+    result <- neon_retrieve(set_details, network, domain, time_index = '30')
+
+    if(inherits(result, 'try-error')){
+        return(generate_ms_exception(glue('Data unavailable for {p} {s}',
+                                          p = prodname_ms,
+                                          s = set_details$site_code)))
     }
-
-    raw_data_dest <- glue('{wd}/data/{n}/{d}/raw/{p}/{s}/{c}',
-                         wd=getwd(), n=network, d=domain, p=set_details$prodname_ms,
-                         s=set_details$site_code, c=set_details$component)
-
-    serialize_list_to_dir(data_pile, raw_data_dest)
 
     return()
 }
 
 #discharge: STATUS=READY
 #. handle_errors
-process_0_DP4.00130 <- function(set_details, network, domain){
+process_0_DP4.00130.001 <- function(set_details, network, domain){
 
-    data_pile <- try(
-        {
-            neonUtilities::loadByProduct(
-                set_details$prodcode_full,
-                site = set_details$site_code,
-                startdate = set_details$component,
-                enddate = set_details$component,
-                package = 'basic',
-                check.size = FALSE)
-        },
-        silent = TRUE)
+    result <- neon_retrieve(set_details, network, domain)
 
-    if(class(data_pile) == 'try-error'){
-      return(generate_ms_exception(glue('Data unavailable for {p} {s} {c}',
-                                        p = set_details$prodname_ms,
-                                        s = set_details$site_code,
-                                        c = set_details$component)))
+    if(inherits(result, 'try-error')){
+        return(generate_ms_exception(glue('Data unavailable for {p} {s}',
+                                          p = prodname_ms,
+                                          s = set_details$site_code)))
     }
 
-    raw_data_dest <- glue('{wd}/data/{n}/{d}/raw/{p}/{s}/{c}',
-                         wd = getwd(),
-                         n = network,
-                         d = domain,
-                         p = set_details$prodname_ms,
-                         s = set_details$site_code,
-                         c = set_details$component)
+    return()
+}
 
-    serialize_list_to_dir(data_pile, raw_data_dest)
+#discharge: STATUS=READY
+#. handle_errors
+process_0_VERSIONLESS002 <- function(set_details, network, domain){
+
+    raw_data_dest <- glue('{wd}/data/{n}/{d}/raw/{p}/{s}',
+                          wd = getwd(),
+                          n = network,
+                          d = domain,
+                          p = prodname_ms,
+                          s = set_details$site_code)
+
+    dir.create(raw_data_dest,
+               showWarnings = FALSE,
+               recursive = TRUE)
+
+    write_loc <- file.path(raw_data_dest, 'composite_series.zip')
+    r <- httr::GET(url = 'https://api.figshare.com/v2/file/download/40935107',
+                   httr::write_disk(write_loc),
+                   overwrite = TRUE)
+
+    if(httr::status_code(r) != 200) stop('figshare download fail')
+
+    unzip(write_loc, exdir = dirname(write_loc))
+    file.remove(write_loc)
+
+    r <- httr::GET(url = 'https://api.figshare.com/v2/articles/23206592')
+    article_deets <- httr::content(r)
+
+    deets_out <- list(url = 'https://figshare.com/ndownloader/files/40935107',
+                      access_time = as.character(with_tz(Sys.time(),
+                                                         tzone = 'UTC')),
+                      last_mod_dt = article_deets$modified_date %>%
+                          strptime(format = '%Y-%m-%dT%H:%M:%S') %>%
+                          with_tz('UTC'))
+
+    return(deets_out)
+}
+
+#isotopes: STATUS=READY
+#. handle_errors
+process_0_DP1.20206.001 <- function(set_details, network, domain){
+
+    result <- neon_retrieve(set_details, network, domain)
+
+    if(inherits(result, 'try-error')){
+        return(generate_ms_exception(glue('Data unavailable for {p} {s}',
+                                          p = prodname_ms,
+                                          s = set_details$site_code)))
+    }
+
+    return()
+}
+
+#precip_isotopes: STATUS=READY
+#. handle_errors
+process_0_DP1.00038.001 <- function(set_details, network, domain){
+
+    result <- neon_retrieve(set_details, network, domain)
+
+    if(inherits(result, 'try-error')){
+        return(generate_ms_exception(glue('Data unavailable for {p} {s}',
+                                          p = prodname_ms,
+                                          s = set_details$site_code)))
+    }
 
     return()
 }
 
 #precip_chemistry: STATUS=READY
 #. handle_errors
-process_0_DP1.00013 <- function(set_details, network, domain){
+process_0_DP1.00013.001 <- function(set_details, network, domain){
 
-    data_pile <- try(neonUtilities::loadByProduct(set_details$prodcode_full,
-                                             site=set_details$site_code, startdate=set_details$component,
-                                             enddate=set_details$component, package='basic', check.size=FALSE),
-                     silent = TRUE)
+    result <- neon_retrieve(set_details, network, domain)
 
-    if(class(data_pile) == 'try-error'){
-      return(generate_ms_exception(glue('Data unavailable for {p} {s} {c}',
-                                        p = set_details$prodname_ms,
-                                        s = set_details$site_code,
-                                        c = set_details$component)))
+    if(inherits(result, 'try-error')){
+        return(generate_ms_exception(glue('Data unavailable for {p} {s}',
+                                          p = prodname_ms,
+                                          s = set_details$site_code)))
     }
 
-    raw_data_dest <- glue('{wd}/data/{n}/{d}/raw/{p}/{s}/{c}',
-                         wd=getwd(), n=network, d=domain, p=set_details$prodname_ms,
-                         s=set_details$site_code, c=set_details$component)
+    return()
+}
 
-    serialize_list_to_dir(data_pile, raw_data_dest)
+#spCond: STATUS=PAUSED
+#. handle_errors
+process_0_DP1.20008.001 <- function(set_details, network, domain){
+
+    result <- neon_retrieve(set_details, network, domain, time_index = '30')
+
+    if(inherits(result, 'try-error')){
+        return(generate_ms_exception(glue('Data unavailable for {p} {s}',
+                                          p = prodname_ms,
+                                          s = set_details$site_code)))
+    }
 
     return()
 }
@@ -355,6 +338,9 @@ process_0_VERSIONLESS001 <- function(set_details, network, domain){
                       cacheOK = FALSE,
                       method = 'curl')
 
+        unzip(rawfile, exdir = dirname(rawfile))
+        file.remove(rawfile)
+
         deets_out$url <- url
         deets_out$access_time <- as.character(with_tz(Sys.time(),
                                                       tzone = 'UTC'))
@@ -373,235 +359,383 @@ process_0_VERSIONLESS001 <- function(set_details, network, domain){
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
-process_1_DP1.20093 <- function(network, domain, prodname_ms, site_code,
-    component){
-    # site_code=site_code; component=in_comp
+process_1_DP1.20093.001 <- function(network, domain, prodname_ms, site_code,
+                                    component){
 
-    rawdir <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
-        n=network, d=domain, p=prodname_ms, s=site_code, c=component)
+    # prodname_ms = 'stream_chemistry__DP1.20093.001'
+    # site_code = 'ARIK'
+    rawdir <- glue('data/{n}/{d}/raw/{p}/{s}',
+                   n = network,
+                   d = domain,
+                   p = prodname_ms,
+                   s = site_code)
 
-    rawfiles <- list.files(rawdir)
+    neonprodcode <- prodcode_from_prodname_ms(prodname_ms) %>%
+        str_split_i('\\.', i = 2)
 
+    rawd <- try({stackByTable_keep_zips(glue('{rawdir}/filesToStack{neonprodcode}'))})
+    if(inherits(rawd, 'try-error')) return(generate_ms_exception('No data for site'))
 
-    relevant_file1 <- 'swc_domainLabData.feather'
-    relevant_file2 <- 'swc_externalLabDataByAnalyte.feather'
+    relevant_tbl1 <- 'swc_domainLabData'
+    relevant_tbl2 <- 'swc_externalLabDataByAnalyte'
+    if(relevant_tbl1 %in% names(rawd)){
 
-    if(relevant_file1 %in% rawfiles){
+        d <- tibble(rawd[[relevant_tbl1]])
 
-        out_dom <- read_feather(glue(rawdir, '/', relevant_file1)) %>%
-            select(siteID, collectDate, remarks, alkMgPerL,
-                   ancMeqPerL) %>%
-            mutate(ms_status = ifelse(is.na(remarks), 0, 1)) %>%
-            select(-remarks) %>%
-            rename(ANC = ancMeqPerL,
-                   alk = alkMgPerL) %>%
-            mutate(ANC = ANC/1000) %>% # convert from meq/l to eq/l
-            pivot_longer(cols = c('ANC', 'alk'), names_to = 'var',
-                         values_to = 'val') %>%
-            filter(!is.na(val)) %>%
-            rename(site_code = siteID,
-                   datetime = collectDate) %>%
-            mutate(datetime = force_tz(datetime, tzone = 'UTC')) %>%
-            filter(!is.na(val))
+        #dd$dataQF is always NA, even when dd$remarks suggest something egregious
+        d$actual_quality_flag <- as.numeric(
+            ! is.na(d$release) &
+                ! grepl('replicate|SOP|protocol|cartridge',
+                        d$remarks,
+                        ignore.case = TRUE)
+        )
 
+        d <- ms_read_raw_csv(preprocessed_tibble = d,
+                             datetime_cols = c('collectDate' = '%Y-%m-%d %H:%M:%S'),
+                             datetime_tz = 'UTC',
+                             site_code_col = 'siteID',
+                             data_cols =  c(alkMgPerL = 'alk',
+                                            ancMeqPerL = 'ANC'),
+                             data_col_pattern = '#V#',
+                             summary_flagcols = 'actual_quality_flag',
+                             is_sensor = FALSE,
+                             sampling_type = 'G')
 
+        d <- ms_cast_and_reflag(d,
+                                varflag_col_pattern = NA,
+                                summary_flags_clean = list(actual_quality_flag = '0'),
+                                summary_flags_dirty = list(actual_quality_flag = '1'))
+
+        out_dom <- ms_conversions_(d,
+                                  convert_units_from = c(ANC = 'meq'),
+                                  convert_units_to = c(ANC = 'eq'))
     }
 
-  if(relevant_file2 %in% rawfiles){
+    if(relevant_tbl2 %in% names(rawd)){
 
-        out_lab <- read_feather(glue(rawdir, '/', relevant_file2)) %>%
-            select(site_code = siteID, datetime = collectDate, var = analyte,
-                   val = analyteConcentration, shipmentWarmQF, sampleCondition) %>%
-            mutate(ms_status = ifelse( shipmentWarmQF == 1 | sampleCondition != 'GOOD',
-                                      1, 0)) %>%
-            select(-shipmentWarmQF, -sampleCondition) %>%
-            mutate(var = case_when(var == 'Si' ~ 'Si',
-                                   var == 'Ortho - P' ~ 'PO4_P',
-                                   var == 'NO3+NO2 - N' ~ 'NO3_NO2_N',
-                                   var == 'NO2 - N' ~ 'NO2_N',
-                                   var == 'NH4 - N' ~ 'NH4_N',
-                                   var == 'specificConductance' ~ 'spCond',
-                                   var == 'UV Absorbance (280 nm)' ~ 'abs280',
-                                   var == 'UV Absorbance (250 nm)' ~ 'abs250',
-                                   var == 'UV Absorbance (254 nm)' ~ 'abs254',
-                                   TRUE ~ var)) %>%
-            mutate(val = ifelse(var == 'ANC', val/1000, val)) %>%
-            filter(var != 'TSS - Dry Mass') %>%
-            mutate(datetime = force_tz(datetime, 'UTC'))
+        d <- tibble(rawd[[relevant_tbl2]]) %>%
+            mutate(analyteConcentration = as.character(analyteConcentration),
+                   #NEON uses BDL to mean "below quantification limit" and ND to mean "below detection limit"
+                   analyteConcentration = if_else(
+                       ! is.na(belowDetectionQF) & belowDetectionQF == 'ND',
+                       'BDL',
+                       analyteConcentration
+                   )) %>%
+            select(-uid, -domainID, -namedLocation, -sampleID, -sampleCode,
+                   -startDate, -laboratoryName, -analysisDate, -coolerTemp,
+                   -publicationDate, -release)
 
-        # TEMPORARILY REMOVING NEON NUTRIENT DATA #
-        out_lab <- out_lab %>%
-          filter(! var %in% c('NH4_N', 'NO2_N', 'NO3_NO2_N', 'TN',
-                              'TPN', 'TDN', 'PO4_P')) %>%
-          filter(!is.na(val))
+        #check for unspecified units
+        missing_unit <- filter(d, is.na(analyteUnits) & ! grepl('UV Abs|pH', analyte))
+        message(paste('dropping', nrow(missing_unit), 'records with unspecified units (total', nrow(d), ')'))
+        d <- filter(d, ! is.na(analyteUnits) | grepl('UV Abs|pH', analyte))
 
-  }
+        #check for vars reported in more than 1 unit
+        var_unit_pairs <- d %>%
+            distinct(analyte, analyteUnits) %>%
+            filter(! is.na(analyteUnits)) %>%
+            arrange(analyte)
+        if(any(duplicated(var_unit_pairs))){
+            warning('we need to address this: analyte-analyteUnits mapping not 1:1')
+            browser()
+        }
 
-    if(!exists('out_lab') && !exists('out_dom')) {
-        print(paste0('swc_externalLabDataByAnalyte.feather and swc_domainLabData.feather are missing for ', component))
+        #sometimes TPN and TPC are reported in milligrams. not sure how to get sample volume,
+        #but so far rare enough that it's probably a mistake (10 total records as of 2024-04-05)
+        weird_unit <- d$analyte %in% c('TPN', 'TPC') & d$analyteUnits != 'microgramsPerLiter'
+        nweird_unit <- sum(weird_unit)
+        if(nweird_unit > 0){
+            message(nweird_unit, ' TPN/TPC observations reported in "',
+                    paste(unique(d[weird_unit, 'analyteUnits']), collapse = ', '),
+                    '". these will be dropped.')
+            d <- d[! weird_unit, ]
+        }
 
+        # update_neon_detlims(rawd$swc_externalLabSummaryData,
+        #                     set = 'chem')
+
+        #consolidate QA info. can't find definitions for externalLabDataQF, and
+        #the values present in that column aren't obviously indicative of ms_status = 1.
+        #probably could be used to identify causes of discontinuities in time series though.
+        if(any(is.na(d$sampleCondition))) stop('handle NA sampleCondition')
+        d <- d %>%
+            mutate(sampleCondition = if_else(belowDetectionQF %in% c('BDL', 'ND'),
+                                             'OK',
+                                             sampleCondition),
+                   sampleCondition = if_else(shipmentWarmQF == 1,
+                                             'OK',
+                                             sampleCondition))
+
+        #handle replicates; create varflag cols
+        d <- d %>%
+            select(-analyteUnits, -belowDetectionQF, -remarks, -shipmentWarmQF,
+                   -externalLabDataQF) %>%
+            filter(! is.na(analyteConcentration)) %>%
+            group_by(collectDate, analyte) %>%
+            #if any replicates are good, ignore the bad ones. otherwise bad will have to do
+            filter(! (sampleCondition != 'GOOD' & 'GOOD' %in% sampleCondition)) %>%
+            #if any replicates are okay, and none is good, ignore the bad ones. otherwise bad will have to do
+            filter(! (sampleCondition == 'Other' & 'OK' %in% sampleCondition & ! 'GOOD' %in% sampleCondition)) %>%
+            summarize(analyteConcentration = mean(suppressWarnings(as.numeric(analyteConcentration)),
+                                                  na.rm = TRUE), #converts "BDL" to NaN
+                      sampleCondition = if_else(any(sampleCondition %in% c('OK', 'Other')),
+                                                'OK', #OK and Other will be consolidated to ms_status = 1
+                                                'GOOD'),
+                      siteID = first(siteID)) %>%
+            ungroup() %>%
+            #restore "BDL" flags
+            mutate(analyteConcentration = as.character(analyteConcentration),
+                   analyteConcentration = if_else(analyteConcentration == 'NaN',
+                                                  'BDL',
+                                                  analyteConcentration)) %>%
+            #create varflags
+            rename(val = analyteConcentration,
+                   flag = sampleCondition) %>%
+            pivot_wider(names_from = 'analyte',
+                        values_from = c('val', 'flag'))
+
+        d <- ms_read_raw_csv(preprocessed_tibble = d,
+                             datetime_cols = c('collectDate' = '%Y-%m-%d %H:%M:%S'),
+                             datetime_tz = 'UTC',
+                             site_code_col = 'siteID',
+                             data_cols =  c(
+                                 'Ortho - P' = 'orthophosphate_P',
+                                 'NO3+NO2 - N' = 'NO3_NO2_N',
+                                 'NO2 - N' = 'NO2_N',
+                                 'NH4 - N' = 'NH4_N',
+                                 'specificConductance' = 'spCond',
+                                 'UV Absorbance (280 nm)' = 'abs280',
+                                 'UV Absorbance (254 nm)' = 'abs254',
+                                 'SO4', 'TDN', 'Ca', 'TDP', 'DOC', 'TN', 'Mg',
+                                 'Mn', 'TPN', 'DIC', 'TOC', 'Na', 'TSS', 'Cl',
+                                 'Fe', 'HCO3', 'F', 'Br', 'TPC', 'pH', 'Si',
+                                 'K', 'TP', 'TDS', 'CO3', 'ANC'),
+                             data_col_pattern = 'val_#V#',
+                             var_flagcol_pattern = 'flag_#V#',
+                             convert_to_BDL_flag = 'BDL',
+                             is_sensor = FALSE,
+                             sampling_type = 'G')
+
+        d <- ms_cast_and_reflag(d,
+                                variable_flags_clean = 'GOOD',
+                                variable_flags_dirty = 'OK',
+                                variable_flags_bdl = 'BDL')
+
+        conv_vars <- neon_chem_vars %>%
+            filter(tolower(neon_unit) != tolower(unit))
+
+        out_lab <- ms_conversions_(
+            d,
+            convert_units_from = deframe(select(conv_vars, ms_var, neon_unit)),
+            convert_units_to = deframe(select(conv_vars, ms_var, unit))
+        )
+    }
+
+    if(! exists('out_lab') && ! exists('out_dom')){
+
+        print(paste0('swc_externalLabDataByAnalyte and swc_domainLabData are missing for ', site_code))
         out_sub <- tibble()
 
     } else {
 
-        if(!exists('out_lab')) {
-            print(paste0('swc_externalLabDataByAnalyte.feather is missing for', component, ', will proceed with Alk and ANC file'))
-
+        if(! exists('out_lab')){
+            print(paste0('swc_externalLabDataByAnalyte is missing for ', site_code, '. proceeding with swc_domainLabData'))
             out_sub <- out_dom
-      }
+        }
 
-      if(!exists('out_dom')) {
-          print(paste0('swc_domainLabData.feather is missing for ', component, ', will proceed with chemisty file file'))
+        if(! exists('out_dom')){
+            print(paste0('swc_domainLabData is missing for ', site_code, '. proceeding with swc_externalLabDataByAnalyte'))
+            out_sub <- out_lab
+        }
 
-          out_sub <- out_lab
-      }
+        if(exists('out_dom') && exists('out_lab')){
+            out_sub <- rbind(out_lab, out_dom)
+        }
 
-      if(exists('out_dom') && exists('out_lab')) {
-          out_sub <- rbind(out_lab, out_dom)
-      }
-
-    out_sub <- out_sub %>%
-        group_by(datetime, site_code, var) %>%
-        summarize(
-            val = mean(val, na.rm=TRUE),
-            ms_status = max(ms_status, na.rm = TRUE)) %>%
-        mutate(val = ifelse(is.nan(val), NA, val)) %>%
-        filter(!is.na(val))
-
+        out_sub <- out_sub %>%
+            group_by(datetime, site_code, var) %>%
+            summarize(
+                ms_status = min(ms_status),
+                val = mean(val[ms_status == min(ms_status)],
+                           na.rm = TRUE)
+            ) %>%
+            ungroup() %>%
+            filter(! is.na(val))
     }
 
     return(out_sub)
 }
 
-#stream_nitrate: STATUS=PAUSED
+#stream_nitrate: STATUS=READY
 #. handle_errors
-process_1_DP1.20033 <- function(network, domain, prodname_ms, site_code,
-    component){
-    # prodname_ms=prodname_ms; site_code=site_code; component=in_comp
+process_1_DP1.20033.001 <- function(network, domain, prodname_ms, site_code,
+                                    component){
 
-    rawdir = glue('data/{n}/{d}/raw/{p}/{s}/{c}',
-        n=network, d=domain, p=prodname_ms, s=site_code, c=component)
-
-    rawfiles = list.files(rawdir)
-
-    relevant_file1 = 'NSW_15_minute.feather'
-    if(relevant_file1 %in% rawfiles){
-        rawd = read_feather(glue(rawdir, '/', relevant_file1))
-    } else {
-        return(generate_ms_exception('Relevant file missing'))
-    }
-
-    if(all(rawd$finalQF == 1)){
-        return(generate_ms_exception('All records failed QA'))
-    }
-
-    updown <- determine_upstream_downstream(rawd)
-    N_mass <- calculate_molar_mass('N')
-
-    out_sub <- rawd %>%
-        mutate(
-            site_code=paste0(siteID, updown), #append "-up" to upstream site_codes
-            datetime = force_tz(startDateTime, 'UTC'), #GMT -> UTC
-            surfWaterNitrateMean = surfWaterNitrateMean * N_mass / 1000) %>% #uM/L NO3 -> mg/L N
-        select(site_code, datetime=startDateTime, val=surfWaterNitrateMean,
-               ms_status = finalQF) %>%
-      mutate(var = 'NO3_N')
-
-    return(out_sub)
-}
-
-#stream_PAR: STATUS=PAUSED
-#. handle_errors
-process_1_DP1.20042 <- function(network, domain, prodname_ms, site_code,
-    component){
-
-    rawdir <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
-                  n=network, d=domain, p=prodname_ms, s=site_code, c=component)
-
-    rawfiles <- list.files(rawdir)
-
-    relevant_file1 = 'PARWS_5min.feather'
-
-    if(relevant_file1 %in% rawfiles){
-        rawd <- read_feather(glue(rawdir, '/', relevant_file1))
-    } else {
-        return(generate_ms_exception('Relevant file missing'))
-    }
-
-    if(all(rawd$PARFinalQF == 1) || all(is.na(rawd$PARMean))){
-        return(generate_ms_exception('All records failed QA or no data in component'))
-    }
-
-    updown <- determine_upstream_downstream(rawd)
-
-    out_sub <- rawd %>%
-        mutate(
-            site_code=paste0(siteID, updown), #append "-up" to upstream site_codes
-            datetime = force_tz(startDateTime, 'UTC')) %>% #GMT -> UTC
-        group_by(datetime, site_code) %>%
-        summarize(
-            val = mean(PARMean, na.rm=TRUE),
-            ms_status = numeric_any(PARFinalQF)) %>%
-        ungroup() %>%
-      mutate(var = 'PAR') %>%
-        select(site_code, datetime=datetime, var, val, ms_status)
-
-    out_sub[is.na(out_sub)] <- NA
-
-    return(out_sub)
-}
-
-#stream_temperature: STATUS=PAUSED
-#. handle_errors
-process_1_DP1.20053 <- function(network, domain, prodname_ms, site_code,
-    component){
-
-    rawdir <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
+    rawdir <- glue('data/{n}/{d}/raw/{p}/{s}',
                    n = network,
                    d = domain,
                    p = prodname_ms,
-                   s = site_code,
-                   c = component)
+                   s = site_code)
 
-    rawfiles <- list.files(rawdir)
-    # write_neon_readme(rawdir, dest='/tmp/neon_readme.txt')
-    # varkey = write_neon_variablekey(rawdir, dest='/tmp/neon_varkey.csv')
+    neonprodcode <- prodcode_from_prodname_ms(prodname_ms) %>%
+        str_split_i('\\.', i = 2)
 
-    relevant_file1 <- 'TSW_5min.feather'
+    rawd <- try({stackByTable_keep_zips(glue('{rawdir}/filesToStack{neonprodcode}'))})
+    if(inherits(rawd, 'try-error')) return(generate_ms_exception('No data for site'))
 
-    if(relevant_file1 %in% rawfiles){
-        rawd <- read_feather(glue(rawdir, '/', relevant_file1))
+    relevant_tbl1 <- 'NSW_15_minute'
+    if(relevant_tbl1 %in% names(rawd)){
+        rawd <- tibble(rawd[[relevant_tbl1]])
     } else {
         return(generate_ms_exception('Relevant file missing'))
     }
 
-    if(all(rawd$finalQF == 1) || all(is.na(rawd$surfWaterTempMean))){
-        return(generate_ms_exception('All records failed QA or no data in component'))
+    #in 2024, SYCA file contains COMO data and FLNT file contains MCDI data
+    rawd <- filter(rawd, siteID == !!site_code)
+
+    if(all(is.na(rawd$surfWaterNitrateMean))){
+        return(generate_ms_exception(paste('No data for', site_code)))
     }
 
+    #just using this to check for weirdness. nitrate is only collected at the
+    #downstream sensor array (S2)
     updown <- determine_upstream_downstream(rawd)
-    # rawd <- mutate(rawd,
-    #                siteID = paste0(siteID, updown))
 
-    out_sub <- rawd %>%
-      mutate(site_code = paste0(siteID, updown)) %>%
-      mutate(datetime = force_tz(startDateTime, 'UTC')) %>%
-      group_by(datetime, site_code) %>%
-      summarize(val = mean(surfWaterTempMean, na.rm=TRUE),
-                ms_status = numeric_any(finalQF)) %>%
-      ungroup() %>%
-      mutate(var = 'temp') %>%
-      select(site_code, datetime, var, val, ms_status)
+    rawd <- neon_average_start_end_times(rawd)
 
-    out_sub[is.na(out_sub)] <- NA
+    d <- ms_read_raw_csv(preprocessed_tibble = rawd,
+                         datetime_cols = c(datetime = '%Y-%m-%d %H:%M:%S'),
+                         datetime_tz = 'UTC',
+                         site_code_col = 'siteID',
+                         data_cols =  c(surfWaterNitrateMean = 'NO3'),
+                         data_col_pattern = '#V#',
+                         summary_flagcols = 'finalQF',
+                         is_sensor = TRUE,
+                         sampling_type = 'I')
 
-    return(out_sub)
+    d <- ms_cast_and_reflag(d,
+                            varflag_col_pattern = NA,
+                            summary_flags_clean = list(finalQF = '0'),
+                            summary_flags_to_drop = list(finalQF = 'sentinel'))
+
+    d <- ms_conversions_(d,
+                        convert_units_from = c(NO3 = 'umol/L'),
+                        convert_units_to = c(NO3 = 'mg/L'))
+
+    return(d)
+}
+
+#stream_PAR: STATUS=READY
+#. handle_errors
+process_1_DP1.20042.001 <- function(network, domain, prodname_ms, site_code,
+                                    component){
+
+    rawdir <- glue('data/{n}/{d}/raw/{p}/{s}',
+                   n = network,
+                   d = domain,
+                   p = prodname_ms,
+                   s = site_code)
+
+    neonprodcode <- prodcode_from_prodname_ms(prodname_ms) %>%
+        str_split_i('\\.', i = 2)
+
+    rawd <- try({stackByTable_keep_zips(glue('{rawdir}/filesToStack{neonprodcode}'))})
+    if(inherits(rawd, 'try-error')) return(generate_ms_exception('No data for site'))
+
+    relevant_tbl1 <- 'PARWS_30min'
+    if(relevant_tbl1 %in% names(rawd)){
+        rawd <- tibble(rawd[[relevant_tbl1]])
+    } else {
+        return(generate_ms_exception('Relevant file missing'))
+    }
+
+    #in 2024, SYCA file contains COMO data and FLNT file contains MCDI data
+    rawd <- filter(rawd, siteID == !!site_code)
+
+    if(all(is.na(rawd$PARMean))){
+        return(generate_ms_exception(paste('No data for', site_code)))
+    }
+
+    rawd <- rename(rawd, finalQF = PARFinalQF)
+
+    rawd <- neon_average_start_end_times(rawd)
+    rawd <- neon_borrow_from_upstream(rawd, relevant_cols = 'PARMean')
+
+    d <- ms_read_raw_csv(preprocessed_tibble = rawd,
+                         datetime_cols = c(date = '%Y-%m-%d'),
+                         datetime_tz = 'UTC',
+                         site_code_col = 'siteID',
+                         data_cols =  c(PARMean = 'PAR'),
+                         data_col_pattern = '#V#',
+                         summary_flagcols = 'finalQF',
+                         is_sensor = TRUE,
+                         sampling_type = 'I')
+
+    d <- ms_cast_and_reflag(d,
+                            varflag_col_pattern = NA,
+                            summary_flags_clean = list(finalQF = '0'),
+                            summary_flags_to_drop = list(finalQF = 'sentinel'))
+
+    return(d)
+}
+
+#stream_temperature: STATUS=READY
+#. handle_errors
+process_1_DP1.20053.001 <- function(network, domain, prodname_ms, site_code,
+                                    component){
+
+    rawdir <- glue('data/{n}/{d}/raw/{p}/{s}',
+                   n = network,
+                   d = domain,
+                   p = prodname_ms,
+                   s = site_code)
+
+    neonprodcode <- prodcode_from_prodname_ms(prodname_ms) %>%
+        str_split_i('\\.', i = 2)
+
+    rawd <- try({stackByTable_keep_zips(glue('{rawdir}/filesToStack{neonprodcode}'))})
+    if(inherits(rawd, 'try-error')) return(generate_ms_exception('No data for site'))
+
+    relevant_tbl1 <- 'TSW_30min'
+    if(relevant_tbl1 %in% names(rawd)){
+        rawd <- tibble(rawd[[relevant_tbl1]])
+    } else {
+        return(generate_ms_exception('Relevant file missing'))
+    }
+
+    #in 2024, SYCA file contains COMO data and FLNT file contains MCDI data
+    rawd <- filter(rawd, siteID == !!site_code)
+
+    if(all(is.na(rawd$surfWaterTempMean))){
+        return(generate_ms_exception(paste('No data for', site_code)))
+    }
+
+    rawd <- neon_average_start_end_times(rawd)
+    rawd <- neon_borrow_from_upstream(rawd, relevant_cols = 'surfWaterTempMean')
+
+    d <- ms_read_raw_csv(preprocessed_tibble = rawd,
+                         datetime_cols = c(date = '%Y-%m-%d'),
+                         datetime_tz = 'UTC',
+                         site_code_col = 'siteID',
+                         data_cols =  c(surfWaterTempMean = 'temp'),
+                         data_col_pattern = '#V#',
+                         summary_flagcols = 'finalQF',
+                         is_sensor = TRUE,
+                         sampling_type = 'I')
+
+    d <- ms_cast_and_reflag(d,
+                            varflag_col_pattern = NA,
+                            summary_flags_clean = list(finalQF = '0'),
+                            summary_flags_to_drop = list(finalQF = 'sentinel'))
+
+    return(d)
 }
 
 #air_pressure: STATUS=PAUSED
 #. handle_errors
 process_1_DP1.00004 <- function(network, domain, prodname_ms, site_code,
-    component){
+                                component){
+
     rawdir = glue('data/{n}/{d}/raw/{p}/{s}/{c}',
                   n=network, d=domain, p=prodname_ms, s=site_code, c=component)
 
@@ -609,10 +743,10 @@ process_1_DP1.00004 <- function(network, domain, prodname_ms, site_code,
     # write_neon_readme(rawdir, dest='/tmp/neon_readme.txt')
     # varkey = write_neon_variablekey(rawdir, dest='/tmp/neon_varkey.csv')
 
-    relevant_file1 = 'BP_30min.feather'
+    relevant_tbl1 = 'BP_30min.feather'
 
-    if(relevant_file1 %in% rawfiles){
-        rawd = read_feather(glue(rawdir, '/', relevant_file1))
+    if(relevant_tbl1 %in% names(rawd)){
+        rawd = tibble(rawd[[relevant_tbl1]])
         out_sub = sourceflags_to_ms_status(rawd, list(staPresFinalQF = 0))
     } else {
         return(generate_ms_exception('Relevant file missing'))
@@ -622,7 +756,7 @@ process_1_DP1.00004 <- function(network, domain, prodname_ms, site_code,
         return(generate_ms_exception('All records failed QA'))
     }
 
-    updown = determine_upstream_downstream(out_sub)
+    updown = determine_upstream_downstream(out_sub)#still need? loop through ggg and table(updown)
 
     out_sub = out_sub %>%
         mutate(
@@ -634,311 +768,755 @@ process_1_DP1.00004 <- function(network, domain, prodname_ms, site_code,
             ms_status = numeric_any(ms_status)) %>%
         ungroup() %>%
         select(site_code, datetime=startDateTime, airpressure=staPresMean,
-            ms_status)
+               ms_status)
 
     out_sub <- synchronize_timestep(d = out_sub)
 
     return(out_sub)
 }
 
-#stream_gases: STATUS=PAUSED
+#stream_gases: STATUS=READY
 #. handle_errors
-process_1_DP1.20097 <- function(network, domain, prodname_ms, site_code,
-    component){
+process_1_DP1.20097.001 <- function(network, domain, prodname_ms, site_code,
+                                    component){
 
-    rawdir = glue('data/{n}/{d}/raw/{p}/{s}/{c}',
-        n=network, d=domain, p=prodname_ms, s=site_code, c=component)
+    rawdir <- glue('data/{n}/{d}/raw/{p}/{s}',
+                   n = network,
+                   d = domain,
+                   p = prodname_ms,
+                   s = site_code)
 
-    rawfiles = list.files(rawdir)
+    neonprodcode <- prodcode_from_prodname_ms(prodname_ms) %>%
+        str_split_i('\\.', i = 2)
 
-    relevant_file1 = 'sdg_externalLabData.feather'
+    rawd <- try({stackByTable_keep_zips(glue('{rawdir}/filesToStack{neonprodcode}'))})
+    if(inherits(rawd, 'try-error')) return(generate_ms_exception('No data for site'))
 
-    # file_data = read_feather(glue(rawdir, '/', 'sdg_fieldData.feather'))
-    # file_data_air = read_feather(glue(rawdir, '/', 'sdg_fieldDataAir.feather'))
-    # file_data_proc = read_feather(glue(rawdir, '/', 'sdg_fieldDataProc.feather'))
-    # file_data_parent = read_feather(glue(rawdir, '/', 'sdg_fieldSuperParent.feather'))
-    # validation = read_feather(glue(rawdir, '/', 'validation_20097.feather'))
-    # variable = read_feather(glue(rawdir, '/', 'variables_20097.feather'))
+    relevant_tbl1 <- 'sdg_externalLabData'
 
-    if(relevant_file1 %in% rawfiles){
+    if(relevant_tbl1 %in% names(rawd)){
 
-        rawd = read_feather(glue(rawdir, '/', relevant_file1)) %>%
-          mutate(sampleCondition = ifelse(is.na(sampleCondition), 1, sampleCondition)) %>%
-          mutate(condition = ifelse(sampleCondition == 'OK',
-                 0, 1)) %>%
-          mutate(gasCheckStandardQF = ifelse(is.na(gasCheckStandardQF), 0,
-                                             gasCheckStandardQF)) %>%
-          mutate(condition_2 = ifelse(gasCheckStandardQF == 1, 1, 0)) %>%
-          mutate(error = ifelse(condition == 1 | condition_2 == 1, 1, 0))
+        # update_neon_detlims(rawd$sdg_externalLabSummaryData,
+        #                     set = 'gas')
 
+        d <- rawd$sdg_externalLabData
+
+        ## conversion from ppm by volume to mol/L
+
+        sdgFormatted <- suppressWarnings(neonDissGas::def.format.sdg(
+            externalLabData = d,
+            fieldDataProc = rawd$sdg_fieldDataProc,
+            fieldSuperParent = rawd$sdg_fieldSuperParent
+        ))
+
+        sdgConcentrations <- neonDissGas::def.calc.sdg.conc(inputFile = sdgFormatted)
+
+        #merge computed concentrations for dissolved gases with main df
+        d <- d %>%
+            as_tibble() %>%
+            filter(grepl('WAT', sampleID)) %>%
+            mutate(sampleID = sub('\\.WAT', '', sampleID)) %>%
+            left_join(select(sdgConcentrations,
+                             waterSampleID,
+                             contains('dissolved')),
+                      by = c(sampleID = 'waterSampleID')) %>%
+            #contentrations are not computed for replicates, but that's okay
+            filter(! if_any(contains('dissolved'), is.na))
+
+        ## consolidate QC info
+
+        d <- d %>%
+            mutate(
+                #sampleCondition can be "OK", NA, or assorted specific things
+                stts = if_else(! is.na(sampleCondition) &
+                                   sampleCondition == 'OK',
+                               0, 1),
+                #remarks usually indicate no issue, but whenever the word "inventory"
+                #appears it indicates labeling mishaps
+                stts = if_else(grepl('inventor', externalRemarks),
+                               1, stts),
+                #these quality flags can be -1, 0, 1, or NA. only 0 is okay.
+                N2OCheckStandardQF = if_else(! is.na(N2OCheckStandardQF) &
+                                                 N2OCheckStandardQF == 0,
+                                             0, 1),
+                CO2CheckStandardQF = if_else(! is.na(CO2CheckStandardQF) &
+                                                 CO2CheckStandardQF == 0,
+                                             0, 1),
+                CH4CheckStandardQF = if_else(! is.na(CH4CheckStandardQF) &
+                                                 CH4CheckStandardQF == 0,
+                                             0, 1),
+                #BDL is not directly indicated, but can be determined like so
+                CH4CheckStandardQF = if_else(
+                    ! is.na(concentrationCH4) & concentrationCH4 <= runDetectionLimitCH4,
+                    1, CH4CheckStandardQF
+                ),
+                N2OCheckStandardQF = if_else(
+                    ! is.na(concentrationN2O) & concentrationN2O <= runDetectionLimitN2O,
+                    1, N2OCheckStandardQF
+                ),
+                CO2CheckStandardQF = if_else(
+                    ! is.na(concentrationCO2) & concentrationCO2 <= runDetectionLimitCO2,
+                    1, CO2CheckStandardQF
+                )
+            )
     } else {
         return(generate_ms_exception('Relevant file missing'))
     }
 
-    if(all(rawd$error == 1)){
-        return(generate_ms_exception('All records failed QA'))
-    }
+    d <- ms_read_raw_csv(preprocessed_tibble = d,
+                         datetime_cols = c('collectDate' = '%Y-%m-%d %H:%M:%S'),
+                         datetime_tz = 'UTC',
+                         site_code_col = 'siteID',
+                         data_cols =  c('CO2', 'N2O', 'CH4'),
+                         data_col_pattern = 'dissolved#V#',
+                         var_flagcol_pattern = '#V#CheckStandardQF',
+                         summary_flagcols = 'stts',
+                         is_sensor = FALSE,
+                         sampling_type = 'G')
 
-    out_sub <- rawd %>%
-        mutate(
-          datetime = lubridate::force_tz(collectDate, 'UTC'), #GMT -> UTC
-          type =  grepl("AIR", rawd$sampleID)) %>%
-        mutate(type = ifelse(type == TRUE, 'air', 'water')) %>%
-      filter(type == 'water') %>%
-        group_by(datetime, siteID) %>%
-      summarise('CH4' = mean(concentrationCH4, na.rm = TRUE),
-                'CO2' = mean(concentrationCO2, na.rm = TRUE),
-                'N2O' = mean(concentrationN2O, na.rm = TRUE),
-                ms_status = max(error, na.rm = TRUE)) %>%
-        ungroup() %>%
-        rename(site_code = siteID) %>%
-      pivot_longer(cols = c('CH4', 'CO2', 'N2O'), names_to = 'var', values_to = 'val')
+    d <- ms_cast_and_reflag(d,
+                            variable_flags_clean = '0',
+                            variable_flags_to_drop = 'sentinel',
+                            summary_flags_clean = list(finalQF = '0'),
+                            summary_flags_to_drop = list(finalQF = 'sentinel'))
 
-    return(out_sub)
+    d <- ms_conversions_(d,
+                        convert_units_from = c(CO2 = 'mol/L',
+                                               CH4 = 'mol/L',
+                                               N2O = 'mol/L'),
+                        convert_units_to = c(CO2 = 'mg/L',
+                                             CH4 = 'mg/L',
+                                             N2O = 'mg/L'))
 }
 
 #surface_elevation: STATUS=PAUSED
 #. handle_errors
 process_1_DP1.20016 <- function(network, domain, prodname_ms, site_code,
-    component){
+                                component){
 
-  rawdir <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
-                 n=network, d=domain, p=prodname_ms, s=site_code, c=component)
+    rawdir <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
+                   n=network, d=domain, p=prodname_ms, s=site_code, c=component)
 
-  rawfiles <- list.files(rawdir)
+    rawfiles <- list.files(rawdir)
 
-  relevant_file <- 'EOS_5_min.feather'
+    relevant_tbl <- 'EOS_5_min.feather'
 
-  if(relevant_file %in% rawfiles) {
+    if(relevant_tbl %in% names(rawd)) {
 
-    rawd <- read_feather(glue(rawdir, '/', relevant_file))
+        rawd <- tibble(rawd[[relevant_tbl]])
 
-    out_sub <- rawd %>%
-      mutate(ms_status = ifelse(sWatElevFinalQF == 1, 1, 0)) %>%
-      mutate(ms_status = ifelse(is.na(ms_status), 0, ms_status)) %>%
-      mutate(var = 'stage_height') %>%
-      select(site_code = siteID, datetime = endDateTime, var, val = surfacewaterElevMean, ms_status)
+        out_sub <- rawd %>%
+            mutate(ms_status = ifelse(sWatElevFinalQF == 1, 1, 0)) %>%
+            mutate(ms_status = ifelse(is.na(ms_status), 0, ms_status)) %>%
+            mutate(var = 'stage_height') %>%
+            select(site_code = siteID, datetime = endDateTime, var, val = surfacewaterElevMean, ms_status)
 
-  } else {
-    return(generate_ms_exception('Missing discharge files'))
-  }
+    } else {
+        return(generate_ms_exception('Missing discharge files'))
+    }
 
-  return(out_sub)
+    return(out_sub)
 
 }
 
-#stream_quality: STATUS=PAUSED
+#stream_quality: STATUS=READY
 #. handle_errors
-process_1_DP1.20288 <- function(network, domain, prodname_ms, site_code,
-    component){
+process_1_DP1.20288.001 <- function(network, domain, prodname_ms, site_code,
+                                    component){
 
-    rawdir <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
-        n=network, d=domain, p=prodname_ms, s=site_code, c=component)
+    rawdir <- glue('data/{n}/{d}/raw/{p}/{s}',
+                   n = network,
+                   d = domain,
+                   p = prodname_ms,
+                   s = site_code)
 
-    rawfiles <- list.files(rawdir)
-    relevant_file1 <- 'waq_instantaneous.feather'
+    neonprodcode <- prodcode_from_prodname_ms(prodname_ms) %>%
+        str_split_i('\\.', i = 2)
 
-    if(relevant_file1 %in% rawfiles){
-        rawd <- read_feather(glue(rawdir, '/', relevant_file1))
+    rawd <- try({stackByTable_keep_zips(glue('{rawdir}/filesToStack{neonprodcode}'))})
+    if(inherits(rawd, 'try-error')) return(generate_ms_exception('No data for site'))
+
+    relevant_tbl1 <- 'waq_instantaneous'
+    if(relevant_tbl1 %in% names(rawd)){
+        rawd <- tibble(rawd[[relevant_tbl1]])
     } else {
         return(generate_ms_exception('Relevant file missing'))
     }
 
+    #in 2024, SYCA file contains COMO data and FLNT file contains MCDI data
+    rawd <- filter(rawd, siteID == !!site_code)
+
     na_test <- rawd %>%
-      select(specificConductance, dissolvedOxygen, pH, chlorophyll, turbidity, fDOM) %>%
-      unique() %>%
-      is.na()
+        select(specificConductance, dissolvedOxygen, pH, chlorophyll, turbidity, fDOM) %>%
+        is.na() %>%
+        all()
 
-    if(all(na_test[1,]) && nrow(na_test) == 1) {
-
-      return(generate_ms_exception('Data file contains all NAs'))
+    if(na_test){
+        return(generate_ms_exception(paste('No data for', site_code)))
     }
 
-    updown = determine_upstream_downstream(rawd)
+    #make column naming consistent
+    rawd <- rename_with(rawd, ~sub('specificConductance', 'specificCond', .))
+    rawd <- rename_with(rawd, ~sub('localDissolvedOxygen', 'localDO', .))
 
-    out_sub <- rawd %>%
-      mutate(site_code=paste0(site_code, updown)) %>%
-      select(site_code,
-             datetime=startDateTime,
-             'spCond__|dat'=specificConductance,
-             'spCond__|flg' = specificCondFinalQF,
-             'DO__|dat'=dissolvedOxygen,
-             'DO__|flg' = dissolvedOxygenFinalQF,
-             'pH__|dat' = pH,
-             'pH__|flg' = pHFinalQF,
-             'CHL__|dat'=chlorophyll,
-             'CHL__|flg' = chlorophyllFinalQF,
-             'turbid__|dat'=turbidity,
-             'turbid__|flg' = turbidityFinalQF,
-             'FDOM__|dat'=fDOM,
-             'FDOM__|flg' = fDOMFinalQF,
-             'DO_sat__|dat' = dissolvedOxygenSaturation,
-             'DO_sat__|flg' = dissolvedOxygenSatFinalQF)
+    rawd <- neon_average_start_end_times(rawd)
+    rawd <- neon_borrow_from_upstream(
+        rawd,
+        relevant_cols = c('specificCond', 'dissolvedOxygen', 'localDOSat',
+                          'pH', 'chlorophyll', 'turbidity', 'fDOM')
+    )
 
-    out_sub <- ms_cast_and_reflag(out_sub,
-                                  variable_flags_clean = 0,
-                                  variable_flags_dirty = 1)
+    d <- ms_read_raw_csv(preprocessed_tibble = rawd,
+                         datetime_cols = c(date = '%Y-%m-%d'),
+                         datetime_tz = 'UTC',
+                         site_code_col = 'siteID',
+                         data_cols =  c(specificCond = 'spCond',
+                                        dissolvedOxygen = 'DO',
+                                        localDOSat = 'DO_sat',
+                                        pH = 'pH',
+                                        chlorophyll = 'Chla',
+                                        turbidity = 'turbid_FNU',
+                                        fDOM = 'FDOM'),
+                         data_col_pattern = '#V#',
+                         var_flagcol_pattern = '#V#FinalQF',
+                         is_sensor = TRUE,
+                         sampling_type = 'I')
 
-    return(out_sub)
+    d <- ms_cast_and_reflag(d,
+                            variable_flags_clean = '0',
+                            variable_flags_to_drop = 'sentinel')
+
+    d <- ms_conversions_(d,
+                        convert_units_from = c(Chla = 'ug/L'),
+                        convert_units_to = c(Chla = 'mg/L'))
+
+    return(d)
 }
 
 #precipitation: STATUS=READY
 #. handle_errors
-process_1_DP1.00006 <- function(network, domain, prodname_ms, site_code,
-                                component) {
+process_1_DP1.00006.001 <- function(network, domain, prodname_ms, site_code,
+                                    component){
 
-  rawdir <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
-                 n=network, d=domain, p=prodname_ms, s=site_code, c=component)
+    # pgauges <- terr_aquat_sitemap[[site_code]]
 
-  rawfiles <- list.files(rawdir)
+    # d <- tibble()
+    # for(pgauge in pgauges){
 
-  relevant_file1 <- 'PRIPRE_5min.feather'
-  relevant_file2 <- 'SECPRE_1min.feather'
+    if(site_code == 'MCRA'){
+        #MCRA precip data are borrowed from hjandrews during derive
+        return(tibble())
+    }
 
-  if(relevant_file2 %in% rawfiles) {
-    rawd2 <- read_feather(glue(rawdir, '/', relevant_file2))
+    rawdir <- glue('data/{n}/{d}/raw/{p}/{s}',
+                   n = network,
+                   d = domain,
+                   p = prodname_ms,
+                   s = site_code)
+                   # s = pgauge)
 
-    out_sub2 <- rawd2 %>%
-      mutate(site_code=paste(site_code, horizontalPosition, sep = '_'),
-             datetime = lubridate::force_tz(startDateTime, 'UTC')) %>%
-      mutate(secPrecipRangeQF = ifelse(is.na(secPrecipRangeQF), 0, secPrecipRangeQF),
-             secPrecipSciRvwQF = ifelse(is.na(secPrecipSciRvwQF), 0, secPrecipSciRvwQF)) %>%
-      mutate(ms_status = ifelse(secPrecipRangeQF == 1 | secPrecipSciRvwQF == 1,
-                                1, 0)) %>%
-      mutate(var = 'precipitation') %>%
-      select(site_code, datetime, var, val = secPrecipBulk, ms_status)
-  }
+    neonprodcode <- prodcode_from_prodname_ms(prodname_ms) %>%
+        str_split_i('\\.', i = 2)
 
-  if(relevant_file1 %in% rawfiles) {
-    rawd1 <- read_feather(glue(rawdir, '/', relevant_file1))
+    rawd <- try({stackByTable_keep_zips(glue('{rawdir}/filesToStack{neonprodcode}'))})
+    if(inherits(rawd, 'try-error')) return(generate_ms_exception('No data for site'))
 
-    out_sub1 <- rawd1 %>%
-      mutate(site_code=paste(site_code, horizontalPosition, sep = '_'),
-             datetime = lubridate::force_tz(startDateTime, 'UTC')) %>%
-      mutate(ms_status = ifelse(priPrecipFinalQF == 1,
-                                1, 0)) %>%
-      mutate(var = 'precipitation') %>%
-      select(site_code, datetime, var, val = priPrecipBulk, ms_status)
-  }
+    relevant_tbl1 <- 'PRIPRE_30min' #primary collector
+    relevant_tbl2 <- 'SECPRE_30min' #secondary collector
 
-  if(!relevant_file1 %in% rawfiles && ! relevant_file2 %in% rawfiles) {
-    return(generate_ms_exception('Missing precip files'))
-  }
+    if(relevant_tbl1 %in% names(rawd)){
 
-  if(relevant_file1 %in% rawfiles && relevant_file2 %in% rawfiles) {
+        rawd1 <- tibble(rawd[[relevant_tbl1]])
 
-    out_sub <- rbind(out_sub2, out_sub1)
+        d1 <- ms_read_raw_csv(preprocessed_tibble = rawd1,
+                              datetime_cols = c(endDateTime = '%Y-%m-%d %H:%M:%S'),
+                              datetime_tz = 'UTC',
+                              site_code_col = 'siteID',
+                              data_cols =  c(priPrecipBulk = 'precipitation'),
+                              data_col_pattern = '#V#',
+                              summary_flagcols = 'priPrecipFinalQF',
+                              is_sensor = TRUE,
+                              sampling_type = 'I',
+                              keep_empty_rows = TRUE)
 
-  } else {
-    if(relevant_file1 %in% rawfiles) { out_sub <- out_sub1 }
-    if(relevant_file2 %in% rawfiles) { out_sub <- out_sub2 }
-  }
+        d1 <- ms_cast_and_reflag(
+            d1,
+            varflag_col_pattern = NA,
+            summary_flags_clean = list(priPrecipFinalQF = '0'),
+            summary_flags_to_drop = list(priPrecipFinalQF = 'sentinel'),
+            keep_empty_rows = TRUE
+        )
+    }
 
-  return(out_sub)
+    if(relevant_tbl2 %in% names(rawd)){
+
+        rawd2 <- tibble(rawd[[relevant_tbl2]])
+
+        d2 <- ms_read_raw_csv(preprocessed_tibble = rawd2,
+                              datetime_cols = c(endDateTime = '%Y-%m-%d %H:%M:%S'),
+                              datetime_tz = 'UTC',
+                              site_code_col = 'siteID',
+                              data_cols =  c(secPrecipBulk = 'precipitation'),
+                              data_col_pattern = '#V#',
+                              summary_flagcols = c('secPrecipValidCalQF',
+                                                   'secPrecipRangeQF',
+                                                   'secPrecipSciRvwQF'),
+                              is_sensor = TRUE,
+                              sampling_type = 'I',
+                              keep_empty_rows = TRUE)
+
+        d2 <- ms_cast_and_reflag(
+            d2,
+            varflag_col_pattern = NA,
+            summary_flags_clean = list(secPrecipValidCalQF = '0',
+                                       secPrecipRangeQF = '0',
+                                       secPrecipSciRvwQF = c('0', NA)),
+            summary_flags_to_drop = list(secPrecipValidCalQF = 'sentinel',
+                                         secPrecipRangeQF = 'sentinel',
+                                         secPrecipSciRvwQF = 'sentinel'),
+            keep_empty_rows = TRUE
+        )
+    }
+
+    if(! relevant_tbl1 %in% names(rawd) && ! relevant_tbl2 %in% names(rawd)){
+        return(generate_ms_exception('Missing precip files'))
+    }
+
+    if(relevant_tbl1 %in% names(rawd) && relevant_tbl2 %in% names(rawd)){
+
+        d <- full_join(d1, d2,
+                       by = c('datetime', 'site_code', 'var'),
+                       suffix = c('1', '2'))
+
+        ## borrow secondary precip values wherever:
+        ## primary is questionable and secondary is not (case A), or
+        ## primary is missing and secondary is available (case B).
+        ## borrow status of secondary precip if used.
+
+        d$ms_status1[is.na(d$ms_status1)] <- 1
+        d$ms_status2[is.na(d$ms_status2)] <- 1
+
+        borrow_inds_a <- d$ms_status1 == 1 & d$ms_status2 == 0 & ! is.na(d$val2)
+        borrow_inds_b <- is.na(d$val1)
+        borrow_inds <- borrow_inds_a | borrow_inds_b
+
+        d$val1[borrow_inds] <- d$val2[borrow_inds]
+        d$ms_status1[borrow_inds] <- d$ms_status2[borrow_inds]
+
+        d$val2 <- d$ms_status2 <- NULL
+        d <- rename(d, val = val1, ms_status = ms_status1)
+
+    } else {
+
+        if(relevant_tbl1 %in% names(rawd)) d <- d1
+        if(relevant_tbl2 %in% names(rawd)) d <- d2
+    }
+
+        # d <- bind_rows(d, d_)
+    # }
+
+    return(d)
+}
+
+#discharge: STATUS=READY
+#. handle_errors
+process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code,
+                                     component){
+
+    for(site_code_ in neon_streams){
+
+        rawfile <- glue('data/{n}/{d}/raw/{p}/sitename_NA/composite_series/{s}.csv',
+                        n = network,
+                        d = domain,
+                        p = prodname_ms,
+                        s = site_code_)
+
+        rawd <- read_csv(rawfile, show_col_types = FALSE) %>%
+            mutate(site = site_code_)
+
+        d <- ms_read_raw_csv(preprocessed_tibble = rawd,
+                             datetime_cols = c(datetime = '%Y-%m-%d %H:%M:%S'),
+                             datetime_tz = 'UTC',
+                             site_code_col = 'site',
+                             data_cols =  c(discharge_Ls = 'discharge'),
+                             data_col_pattern = '#V#',
+                             summary_flagcols = 'source',
+                             is_sensor = TRUE,
+                             sampling_type = 'I')
+
+        d <- ms_cast_and_reflag(d,
+                                varflag_col_pattern = NA,
+                                summary_flags_clean = list(source = 'NEON'),
+                                summary_flags_to_drop = list(source = 'sentinel'))
+
+        d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
+        d <- synchronize_timestep(d)
+
+        d$ms_interp[d$ms_status == 1] <- 1
+
+        write_ms_file(d = d,
+                      network = network,
+                      domain = domain,
+                      prodname_ms = prodname_ms,
+                      site_code = site_code_,
+                      level = 'munged',
+                      shapefile = FALSE)
+    }
+}
+
+#isotopes: STATUS=READY
+#. handle_errors
+process_1_DP1.20206.001 <- function(network, domain, prodname_ms, site_code,
+                                    component){
+
+    rawdir <- glue('data/{n}/{d}/raw/{p}/{s}',
+                   n = network,
+                   d = domain,
+                   p = prodname_ms,
+                   s = site_code)
+
+    neonprodcode <- prodcode_from_prodname_ms(prodname_ms) %>%
+        str_split_i('\\.', i = 2)
+
+    rawd <- try({stackByTable_keep_zips(glue('{rawdir}/filesToStack{neonprodcode}'))})
+    if(inherits(rawd, 'try-error')) return(generate_ms_exception('No data for site'))
+
+    relevant_tbl1 <- 'asi_externalLabH2OIsotopes'
+    if(relevant_tbl1 %in% names(rawd)){
+        rawd <- tibble(rawd[[relevant_tbl1]])
+    } else {
+        return(generate_ms_exception('Relevant file missing'))
+    }
+
+    if(all(is.na(rawd$d2HWater))){
+        return(generate_ms_exception(paste('No data for', site_code)))
+    }
+
+    #in 2024, SYCA file contains COMO data and FLNT file contains MCDI data
+    rawd <- filter(rawd, siteID == !!site_code)
+
+    rawd$remark_summary <- as.numeric(
+        ! is.na(rawd$externalRemarks) &
+            grepl('vial|volume| id',
+                  rawd$externalRemarks,
+                  ignore.case = TRUE)
+    )
+
+    d <- ms_read_raw_csv(preprocessed_tibble = rawd,
+                         datetime_cols = c('collectDate' = '%Y-%m-%d %H:%M:%S'),
+                         datetime_tz = 'UTC',
+                         site_code_col = 'siteID',
+                         data_cols =  c(d2HWater = 'dD',
+                                        d18OWater = 'd18O'),
+                         data_col_pattern = '#V#',
+                         summary_flagcols = c('remark_summary',
+                                              # 'isotopeH2OExternalLabQF',
+                                              'sampleCondition'),
+                         is_sensor = FALSE,
+                         sampling_type = 'G')
+
+    d <- ms_cast_and_reflag(
+        d,
+        varflag_col_pattern = NA,
+        summary_flags_clean = list(remark_summary = '0',
+                                   sampleCondition = 'OK'),
+        summary_flags_to_drop = list(remark_summary = 'sentinel',
+                                     sampleCondition = 'sentinel')
+    )
+
+    return(d)
+}
+
+#precip_isotopes: STATUS=READY
+#. handle_errors
+process_1_DP1.00038.001 <- function(network, domain, prodname_ms, site_code,
+                                    component){
+
+    rawdir <- glue('data/{n}/{d}/raw/{p}/{s}',
+                   n = network,
+                   d = domain,
+                   p = prodname_ms,
+                   s = site_code)
+
+    neonprodcode <- prodcode_from_prodname_ms(prodname_ms) %>%
+        str_split_i('\\.', i = 2)
+
+    rawd <- try({stackByTable_keep_zips(glue('{rawdir}/filesToStack{neonprodcode}'))})
+    if(inherits(rawd, 'try-error')) return(generate_ms_exception('No data for site'))
+
+    relevant_tbl1 <- 'wdi_isoPerSample'
+    if(relevant_tbl1 %in% names(rawd)){
+        rawd <- tibble(rawd[[relevant_tbl1]])
+    } else {
+        return(generate_ms_exception('Relevant file missing'))
+    }
+
+    if(all(is.na(rawd$d2HWater))){
+        return(generate_ms_exception(paste('No data for', site_code)))
+    }
+
+    rawd$remark_summary <- as.numeric(
+        ! is.na(rawd$externalRemarks) &
+            grepl('vial|volume| id',
+                  rawd$externalRemarks,
+                  ignore.case = TRUE)
+    )
+
+    d <- ms_read_raw_csv(preprocessed_tibble = rawd,
+                         datetime_cols = c('collectDate' = '%Y-%m-%d %H:%M:%S'),
+                         datetime_tz = 'UTC',
+                         site_code_col = 'siteID',
+                         data_cols =  c(d2HWater = 'dD',
+                                        d18OWater = 'd18O'),
+                         data_col_pattern = '#V#',
+                         summary_flagcols = c('remark_summary',
+                                              'sampleCondition'),
+                         is_sensor = FALSE,
+                         sampling_type = 'G',
+                         keep_empty_rows = TRUE)
+
+    d <- ms_cast_and_reflag(
+        d,
+        varflag_col_pattern = NA,
+        summary_flags_clean = list(remark_summary = '0',
+                                   sampleCondition = 'OK'),
+        summary_flags_to_drop = list(remark_summary = 'sentinel',
+                                     sampleCondition = 'sentinel'),
+        keep_empty_rows = TRUE
+    )
+
+    return(d)
+}
+
+#spCond: STATUS=PAUSED
+#. handle_errors
+process_1_DP1.20008.001 <- function(network, domain, prodname_ms, site_code,
+                                    component){
 
 }
 
 #discharge: STATUS=READY
 #. handle_errors
-process_1_DP4.00130 <-function(network, domain, prodname_ms, site_code,
+process_1_DP4.00130.001 <-function(network, domain, prodname_ms, site_code,
                                    component){
 
-  rawdir <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
-                 n=network, d=domain, p=prodname_ms, s=site_code, c=component)
+    #stationHorizontalID seems to have stabilized as of first publication of composite Q.
+    #only one per site when composite-era data are filtered out.
 
-  rawfiles <- list.files(rawdir)
+    rawdir <- glue('data/{n}/{d}/raw/{p}/{s}',
+                   n = network,
+                   d = domain,
+                   p = prodname_ms,
+                   s = site_code)
 
-  if(site_code == 'TOMB'){
-      relevant_file <- 'csd_continuousDischargeUSGS.feather'
-  } else {
-      relevant_file <- 'csd_continuousDischarge.feather'
-  }
+    neonprodcode <- prodcode_from_prodname_ms(prodname_ms) %>%
+        str_split_i('\\.', i = 2)
 
-  if(relevant_file %in% rawfiles) {
+    rawd <- try({stackByTable_keep_zips(glue('{rawdir}/filesToStack{neonprodcode}'))})
+    if(inherits(rawd, 'try-error')) return(generate_ms_exception('No data for site'))
 
-    rawd <- read_feather(glue(rawdir, '/', relevant_file))
+    if(site_code == 'TOMB'){
+        relevant_tbl1 <- 'csd_continuousDischargeUSGS'
+    } else {
+        relevant_tbl1 <- 'csd_continuousDischarge'
+    }
 
-      if(site_code == 'TOMB'){
+    if(relevant_tbl1 %in% names(rawd)){
+        rawd <- tibble(rawd[[relevant_tbl1]])
+    } else {
+        return(generate_ms_exception('Relevant file missing'))
+    }
 
-        out_sub <- rawd %>%
-          mutate(ms_status = ifelse(is.na(dischargeFinalQFSciRvw), 0, dischargeFinalQFSciRvw)) %>%
-          mutate(var = 'discharge') %>%
-          select(site_code = siteID, datetime = endDate, var, val = usgsDischarge, ms_status)
+    #in 2024, SYCA file contains COMO data and FLNT file contains MCDI data
+    rawd <- filter(rawd, siteID == !!site_code)
 
-      } else {
+    if(all(is.na(rawd$maxpostDischarge))){
+        return(generate_ms_exception(paste('No data for', site_code)))
+    }
 
-        out_sub <- rawd %>%
-          mutate(dischargeFinalQFSciRvw = ifelse(is.na(dischargeFinalQFSciRvw), 0, dischargeFinalQFSciRvw),
-                 dischargeFinalQF = ifelse(is.na(dischargeFinalQF), 0, dischargeFinalQF)) %>%
-          mutate(ms_status = ifelse(dischargeFinalQF == 1 | dischargeFinalQFSciRvw == 1,
-                                    1, 0)) %>%
-          mutate(var = 'discharge') %>%
-          select(site_code = siteID, datetime = endDate, var, val = maxpostDischarge, ms_status)
-      }
+    composite_q <- read_feather(glue('data/neon/neon/munged/discharge__VERSIONLESS002/{site_code}.feather'))
+    last_composite_date <- as.Date(max(composite_q$datetime))
+    rm(composite_q)
 
-  } else {
-    return(generate_ms_exception('Missing discharge files'))
-  }
+    rawd <- rawd %>%
+        mutate(endDate = with_tz(endDate, 'UTC')) %>%
+        filter(!(siteID == !!site_code & endDate <= !!last_composite_date))
 
-  return(out_sub)
+    if(site_code == 'TOMB'){
 
+        d <- ms_read_raw_csv(preprocessed_tibble = rawd,
+                             datetime_cols = c(endDate = '%Y-%m-%d %H:%M:%S'),
+                             datetime_tz = 'UTC',
+                             site_code_col = 'siteID',
+                             data_cols =  c(usgsDischarge = 'discharge'),
+                             data_col_pattern = '#V#',
+                             summary_flagcols = c('dischargeFinalQF',
+                                                  'dischargeFinalQFSciRvw',
+                                                  'usgsValueQualCode'),
+                             is_sensor = TRUE,
+                             sampling_type = 'I')
+
+        d <- ms_cast_and_reflag(
+            d,
+            varflag_col_pattern = NA,
+            summary_flags_clean = list(dischargeFinalQF = '0',
+                                       dischargeFinalQFSciRvw = '0',
+                                       usgsValueQualCode = 'A'),
+            summary_flags_to_drop = list(dischargeFinalQF = 'sentinel',
+                                         dischargeFinalQFSciRvw = 'sentinel',
+                                         usgsValueQualCode = 'sentinel')
+        )
+
+    } else {
+
+        d <- ms_read_raw_csv(preprocessed_tibble = rawd,
+                             datetime_cols = c(endDate = '%Y-%m-%d %H:%M:%S'),
+                             datetime_tz = 'UTC',
+                             site_code_col = 'siteID',
+                             data_cols =  c(maxpostDischarge = 'discharge'),
+                             data_col_pattern = '#V#',
+                             summary_flagcols = c('dischargeFinalQF',
+                                                  'dischargeFinalQFSciRvw'),
+                             is_sensor = TRUE,
+                             sampling_type = 'I')
+
+        d <- ms_cast_and_reflag(
+            d,
+            varflag_col_pattern = NA,
+            summary_flags_clean = list(dischargeFinalQF = '0',
+                                       dischargeFinalQFSciRvw = '0'),
+            summary_flags_to_drop = list(dischargeFinalQF = 'sentinel',
+                                         dischargeFinalQFSciRvw = 'sentinel')
+        )
+    }
+
+    return(d)
 }
 
 #precip_chemistry: STATUS=READY
 #. handle_errors
-process_1_DP1.00013 <- function(network, domain, prodname_ms, site_code,
-                                component){
+process_1_DP1.00013.001 <- function(network, domain, prodname_ms, site_code,
+                                    component){
 
-  rawdir <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
-                 n=network, d=domain, p=prodname_ms, s=site_code, c=component)
+    rawdir <- glue('data/{n}/{d}/raw/{p}/{s}',
+                   n = network,
+                   d = domain,
+                   p = prodname_ms,
+                   s = site_code)
 
-  rawfiles <- list.files(rawdir)
+    neonprodcode <- prodcode_from_prodname_ms(prodname_ms) %>%
+        str_split_i('\\.', i = 2)
 
-  relevant_file <- 'wdp_chemLab.feather'
+    rawd <- try({stackByTable_keep_zips(glue('{rawdir}/filesToStack{neonprodcode}'))})
+    if(inherits(rawd, 'try-error')) return(generate_ms_exception('No data for site'))
 
-  # Units all mg/l uS/cm and pH
+    relevant_tbl <- 'wdp_chemLab'
+    if(! relevant_tbl %in% names(rawd)){
+        return(generate_ms_exception('Relevant file missing'))
+    }
 
-  if(relevant_file %in% rawfiles){
+    d <- tibble(rawd[[relevant_tbl]])
 
-    out_sub <- read_feather(glue(rawdir, '/', relevant_file)) %>%
-      rename('Ca__|dat' = precipCalcium,
-             'Mg__|dat' = precipMagnesium,
-             'K__|dat' = precipPotassium,
-             'Na__|dat' = precipSodium,
-             'NH4__|dat' = precipAmmonium,
-             'NO3__|dat' =  precipNitrate,
-             'SO4__|dat' = precipSulfate,
-             'PO4__|dat' = precipPhosphate,
-             'Cl__|dat' = precipChloride,
-             'Br__|dat' = precipBromide,
-             'pH__|dat' = pH,
-             'spCond__|dat' = precipConductivity,
-             'Ca__|flg' = precipCalciumFlag,
-             'Mg__|flg' = precipMagnesiumFlag,
-             'K__|flg' = precipPotassiumFlag,
-             'Na__|flg' = precipSodiumFlag,
-             'NH4__|flg' = precipAmmoniumFlag,
-             'NO3__|flg' =  precipNitrateFlag,
-             'SO4__|flg' = precipSulfateFlag,
-             'PO4__|flg' = precipPhosphateFlag,
-             'Cl__|flg' = precipChlorideFlag,
-             'Br__|flg' = precipBromideFlag) %>%
-      mutate('spCond__|flg' = NA,
-             'pH__|flg' = NA) %>%
-      select(datetime = collectDate, namedLocation, contains('|dat'), contains('|flg')) %>%
-      mutate(across(contains('|flg'), ~ifelse(is.na(.x), 0, 1))) %>%
-      mutate(site_code = !!site_code) %>%
-      select(-namedLocation)
+    if(! all(c('precipNitrate', 'pH', 'precipMagnesiumFlag', 'precipConductivity') %in% colnames(d))){
+        stop('Known column names missing. There has been a change')
+    }
 
-    out_sub <- ms_cast_and_reflag(out_sub,
-                            variable_flags_clean = 0,
-                            variable_flags_dirty = 1)
+    #consolidate free-hand remarks into flag (sampleCondition doesn't capture everything)
+    d$actual_quality_flag <- as.numeric(
+        ! is.na(d$labConditionRemarks) &
+            grepl('pollen|small|spec|bug|matter|dirt|leak|only',
+                  d$labConditionRemarks,
+                  ignore.case = TRUE)
+    )
 
-    return(out_sub)
+    #detection limits...
+    #first thought: BDL gets replaced with detection limit even if there are other concerns.
+    #second thought: but rly, this is just for recording DLs, as values are supplied for bdl records.
+    #final thought: ugh, detlims not even reported.
+    # d <- mutate(
+    #     d,
+    #     across(ends_with('Flag', ignore.case = FALSE),
+    #            ~if_else(grepl('below detection limit', ., ignore.case = TRUE),
+    #                     'Below detection limit',
+    #                     .)
+    #     )
+    # )
+    #
+    # update_neon_detlims(rawd$)
 
-  } else {
-    return(generate_ms_exception('wdp_chemLab.feather file missing'))
-  }
+    #NOTE: NEON does not necessarily flag samples that sat in the collector for several months
+    #or even a year (see DELA sample with setDate == '2020-03-05 17:00:00').
+    #it's possible that their QA process accounts for this? Anyway, will leave
+    #it to end-user to make assumptions
+
+    ##next, convert "setDate" and "collectDate" to a single date column
+
+    #cull columns, convert datetimes to dates
+    d <- d %>%
+        select(siteID, setDate, collectDate, starts_with('precip'),
+               pH, actual_quality_flag, sampleCondition) %>%
+        mutate(setDate = as.Date(setDate),
+               collectDate = as.Date(collectDate))
+
+    #fill in days during which collectors were operating
+    d$date <- Map(seq, from = d$setDate, to = d$collectDate, by = 'day')
+
+    #fill in missing days between a collection and the following deployment
+    d <- d %>%
+        unnest(date) %>%
+        relocate(date) %>%
+        arrange(date) %>%
+        tidyr::complete(date = seq(min(.$date), max(.$date), by = 'day')) %>%
+        arrange(date)
+
+    #associate each measurement with its collectionDate, not setDate (collections almost always in evening)
+    d <- d %>%
+        group_by(date) %>%
+        filter(n() == 1 | date == collectDate) %>%
+        ungroup() %>%
+        select(-setDate, -collectDate)
+
+    d <- ms_read_raw_csv(
+        preprocessed_tibble = d,
+        datetime_cols = c('date' = '%Y-%m-%d'),
+        datetime_tz = 'UTC',
+        site_code_col = 'siteID',
+        data_cols =  c(Calcium = 'Ca',
+                       Magnesium = 'Mg',
+                       Potassium = 'K',
+                       Sodium = 'Na',
+                       Ammonium = 'NH4',
+                       Nitrate = 'NO3',
+                       Sulfate = 'SO4',
+                       Phosphate = 'PO4',
+                       Chloride = 'Cl',
+                       Bromide = 'Br',
+                       pH = 'pH',
+                       Conductivity = 'spCond'),
+        data_col_pattern = 'precip#V#',
+        alt_datacol_pattern = '#V#',
+        var_flagcol_pattern = 'precip#V#Flag',
+        summary_flagcols = c('actual_quality_flag',
+                             'sampleCondition'),
+        is_sensor = FALSE,
+        sampling_type = 'G',
+        ignore_missing_col_warning = TRUE,
+        keep_empty_rows = TRUE
+    )
+
+    d <- ms_cast_and_reflag(
+        d,
+        variable_flags_clean = c(NA, 'Analytical dilution'),
+        variable_flags_to_drop = 'totally unmatchable sentinel jic',
+        # variable_flags_bdl = ,
+        summary_flags_clean = list(actual_quality_flag = '0',
+                                   sampleCondition = NA),
+        summary_flags_to_drop = list(actual_quality_flag = 'sentinel',
+                                     sampleCondition = 'sentinel'),
+        keep_empty_rows = TRUE
+    )
+
+    return(d)
 }
 
 #ws_boundary: STATUS=READY
@@ -955,9 +1533,9 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code,
 
     rawfile1 <- glue(rawdir1, '/NEONAquaticWatershed.zip')
 
-    zipped_files <- unzip(zipfile = rawfile1,
-                          exdir = rawdir1,
-                          overwrite = TRUE)
+    # zipped_files <- unzip(zipfile = rawfile1,
+    #                       exdir = rawdir1,
+    #                       overwrite = TRUE)
 
     projstring <- choose_projection(unprojected = TRUE)
 
@@ -973,22 +1551,7 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code,
 
     if(nrow(d) == 0) stop('no rows in sf object')
 
-    # munged_data_dest <- glue('data/{n}/{d}/munged/{p}',
-    #                          n = network,
-    #                          d = domain,
-    #                          p = prodname_ms)
-    #
-    # dir.create(path = munged_data_dest,
-    #            showWarnings = FALSE,
-    #            recursive = TRUE)
-
     for(i in 1:nrow(d)){
-
-        # dir.create(path = glue(munged_data_dest,
-        #                        '/',
-        #                        d$site_code[i]),
-        #            showWarnings = FALSE,
-        #            recursive = TRUE)
 
         write_ms_file(d = d[i, ],
                       network = network,
@@ -999,9 +1562,6 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code,
                       shapefile = TRUE)
     }
 
-    unlink(zipped_files)
-
-    # return(d)
     return()
 }
 
@@ -1009,96 +1569,119 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code,
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
-process_2_ms001 <- function(network, domain, prodname_ms) {
+process_2_ms001 <- function(network, domain, prodname_ms){
 
     combine_products(network = network,
                      domain = domain,
                      prodname_ms = prodname_ms,
-                     input_prodname_ms = c('stream_quality__DP1.20288',
-                                           'stream_gases__DP1.20288',
-                                           'stream_temperature__DP1.20053',
-                                           'stream_nitrate__DP1.20033',
-                                           'stream_chemistry__DP1.20093'))
+                     input_prodname_ms = c('stream_chemistry__DP1.20093.001',
+                                           'stream_quality__DP1.20288.001',
+                                           # 'spCond__DP1.20008.001',
+                                           'stream_nitrate__DP1.20033.001',
+                                           'stream_gases__DP1.20097.001',
+                                           'stream_temperature__DP1.20053.001',
+                                           'stream_PAR__DP1.20042.001',
+                                           'isotopes__DP1.20206.001'))
 
     return()
 }
 
-#precipitation: STATUS=READY
+#discharge: STATUS=READY
 #. handle_errors
-process_2_ms002 <- function(network, domain, prodname_ms) {
+process_2_ms002 <- function(network, domain, prodname_ms){
 
-    #Temporary, NEON only hace 1 precip gauge (usually) per site. Eventuly will
-    #leverage other data to interploate but for now directly linking gauge to
-    #watersheds
-    dir.create('data/neon/neon/derived/precipitation__ms002/', recursive = TRUE)
+    combine_products(network = network,
+                     domain = domain,
+                     prodname_ms = prodname_ms,
+                     input_prodname_ms = c('discharge__DP4.00130.001',
+                                           'discharge__VERSIONLESS002'))
 
-    dir <- 'data/neon/neon/munged/precipitation__DP1.00006/'
-
-    site_files <- list.files(dir)
-
-    sites <- unique(str_split_fixed(site_files, '_', n = Inf)[,1])
-
-    for(i in 1:length(sites)) {
-
-        file <- grep(sites[i], site_files, value = TRUE)
-
-        if(length(file) == 1) {
-
-            precip <- read_feather(paste0(dir, file)) %>%
-                mutate(site_code = !!sites[i]) %>%
-                mutate(var = 'IS_precipitation')
-        } else {
-
-            file <- grep('900', file, value = TRUE)
-
-            precip <- read_feather(paste0(dir, file)) %>%
-                mutate(site_code = !!sites[i]) %>%
-                mutate(var = 'IS_precipitation')
-        }
-
-        write_feather(precip, glue('data/neon/neon/derived/precipitation__ms002/{s}.feather',
-                           s = sites[i]))
-
-    }
-
-  return()
+    return()
 }
 
-#precip_flux_inst: STATUS=READY
+#precip_chemistry: STATUS=READY
 #. handle_errors
-process_2_ms003 <- function(network, domain, prodname_ms) {
+process_2_ms003 <- function(network, domain, prodname_ms){
 
-    chemfiles <- ms_list_files(network = network,
-                               domain = domain,
-                               prodname_ms = 'precip_chemistry__DP1.00013')
-
-    qfiles <- ms_list_files(network = network,
-                            domain = domain,
-                            prodname_ms = 'precipitation__ms002')
-
-    flux_sites <- base::intersect(
-        fname_from_fpath(qfiles, include_fext = FALSE),
-        fname_from_fpath(chemfiles, include_fext = FALSE))
-
-    for(s in flux_sites){
-
-        flux <- sw(calc_inst_flux(chemprod = 'precip_chemistry__DP1.00013',
-                                  qprod = 'precipitation__ms002',
-                                  site_code = s))
-
-        if(!is.null(flux)){
-
-        write_ms_file(d = flux,
-                      network = network,
-                      domain = domain,
-                      prodname_ms = prodname_ms,
-                      site_code = s,
-                      level = 'derived',
-                      shapefile = FALSE)
-        }
-    }
+    combine_products(
+        network = network,
+        domain = domain,
+        prodname_ms = prodname_ms,
+        input_prodname_ms = c('precip_chemistry__DP1.00013.001',
+                              'precip_isotopes__DP1.00038.001')
+    )
 }
+
+#stream_gauge_locations: STATUS=READY
+#. handle_errors
+process_2_ms004 <- stream_gauge_from_site_data
+
+#precip_gauge_locations: STATUS=READY
+#. handle_errors
+process_2_ms005 <- precip_gauge_from_site_data
 
 #stream_flux_inst: STATUS=READY
 #. handle_errors
-process_2_ms004 <- derive_stream_flux
+process_2_ms006 <- derive_stream_flux
+
+#precip_pchem_pflux: STATUS=READY
+#. handle_errors
+process_2_ms007 <- function(network, domain, prodname_ms){
+
+    pchem_prodname_ms <- get_derive_ingredient(network = network,
+                                               domain = domain,
+                                               prodname = 'precip_chemistry')
+
+    precip_prodname_ms <- get_derive_ingredient(network = network,
+                                                domain = domain,
+                                                prodname = 'precipitation')
+
+    wb_prodname_ms <- get_derive_ingredient(network = network,
+                                            domain = domain,
+                                            prodname = 'ws_boundary')
+
+    rg_prodname_ms <- get_derive_ingredient(network = network,
+                                            domain = domain,
+                                            prodname = 'precip_gauge_locations')
+
+    for(site in c('MCRA', names(terr_aquat_sitemap))){
+
+        if(site == 'MCRA'){
+
+            #borrow precip data from hjandrews
+            warning('make sure hjandrews has already been derived in this macrosheds version. precip data needed for NEON-MCRA')
+
+            hj_pchem <- get_derive_ingredient('lter', 'hjandrews', 'precip_chemistry')
+            hj_precip <- get_derive_ingredient('lter', 'hjandrews', 'precipitation')
+            hj_rg <- get_derive_ingredient('lter', 'hjandrews', 'precip_gauge_locations')
+
+            hj_pgauge_ids <- site_data %>%
+                filter(domain == 'hjandrews',
+                       site_type == 'rain_gauge') %>%
+                pull(site_code)
+
+            precip_pchem_pflux_idw(pchem_prodname = hj_pchem,
+                                   precip_prodname = hj_precip,
+                                   wb_prodname = wb_prodname_ms,
+                                   pgauge_prodname = hj_rg,
+                                   prodname_ms = prodname_ms,
+                                   filter_sites = list(precip = hj_pgauge_ids,
+                                                       wb = site),
+                                   donor_domain = c('lter' = 'hjandrews'))
+
+        } else {
+
+            pgauges <- terr_aquat_sitemap[[site]]
+
+            precip_pchem_pflux_idw(pchem_prodname = pchem_prodname_ms,
+                                   precip_prodname = precip_prodname_ms,
+                                   wb_prodname = wb_prodname_ms,
+                                   pgauge_prodname = rg_prodname_ms,
+                                   prodname_ms = prodname_ms,
+                                   filter_sites = list(precip = pgauges,
+                                                       wb = site))
+        }
+    }
+}
+
+

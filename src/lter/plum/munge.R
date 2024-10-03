@@ -10,7 +10,6 @@ if(! is.null(prodname_filter)){
     prod_info <- filter(prod_info, prodname %in% prodname_filter)
 }
 
-# i=1
 for(i in seq_len(nrow(prod_info))){
 
     prodname_ms <<- paste0(prod_info$prodname[i], '__', prod_info$prodcode[i])
@@ -35,35 +34,39 @@ for(i in seq_len(nrow(prod_info))){
 
         if(munge_status == 'ok'){
             loginfo(glue('Nothing to do for {s} {p}',
-                         s=site_code, p=prodname_ms), logger=logger_module)
+                         s = site_code,
+                         p = prodname_ms),
+                    logger = logger_module)
             next
         } else {
             loginfo(glue('Munging {s} {p}',
-                         s=site_code, p=prodname_ms), logger=logger_module)
+                         s = site_code,
+                         p = prodname_ms),
+                    logger = logger_module)
         }
 
-            munge_rtn <- munge_time_component(network = network,
-                                              domain = domain,
-                                              site_code = site_code,
-                                              prodname_ms = prodname_ms,
-                                              tracker = held_data)
+        munge_rtn <- munge_time_component(network = network,
+                                          domain = domain,
+                                          site_code = site_code,
+                                          prodname_ms = prodname_ms,
+                                          tracker = held_data)
 
-            if(is_ms_err(munge_rtn)){
+        if(is_ms_err(munge_rtn)){
 
-                logging::logerror(as.character(munge_rtn))
-                update_data_tracker_m(network = network,
-                                      domain = domain,
-                                      tracker_name = 'held_data',
-                                      prodname_ms = prodname_ms,
-                                      site_code = site_code,
-                                      new_status = 'error')
+            logging::logerror(as.character(munge_rtn))
+            update_data_tracker_m(network = network,
+                                  domain = domain,
+                                  tracker_name = 'held_data',
+                                  prodname_ms = prodname_ms,
+                                  site_code = site_code,
+                                  new_status = 'error')
 
-            } else if(is_blocklist_indicator(munge_rtn)){
-                next
-            } else {
-                invalidate_derived_products(
-                    successor_string = prod_info$precursor_of[i])
-            }
+        } else if(is_blocklist_indicator(munge_rtn)){
+            next
+        } else {
+            invalidate_derived_products(
+                successor_string = prod_info$precursor_of[i])
+        }
     }
 
     write_metadata_m(network = network,

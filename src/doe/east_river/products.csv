@@ -8,6 +8,7 @@ VERSIONLESS006,stream_chemistry,ready,ready,NA,stream_chemistry__ms001,NA,east_r
 VERSIONLESS007,stream_chemistry,ready,ready,NA,stream_chemistry__ms001,NA,east_river_nitrogen,https://data.ess-dive.lbl.gov/catalog/d1/mn/v2/object/ess-dive-c924a99c907e8f4-20230810T171143314
 VERSIONLESS008,ws_boundary,ready,ready,NA,precip_pchem_pflux__ms006,NA,east_river_ws_boundaries,https://data.ess-dive.lbl.gov/catalog/d1/mn/v2/packages/application%2Fbagit-097/ess-dive-3b9a58adc163fd4-20190509T155206477018
 VERSIONLESS009,discharge,ready,ready,NA,discharge__ms002,NA,east_river_discharge_v2,https://data.ess-dive.lbl.gov/catalog/d1/mn/v2/object/ess-dive-c5f69f447232423-20230710T184311288
+VERSIONLESS009,stream_chemistry,ready,ready,NA,stream_chemistry__ms001,NA,east_river_discharge_v2,https://data.ess-dive.lbl.gov/catalog/d1/mn/v2/object/ess-dive-c5f69f447232423-20230710T184311288
 ms001,stream_chemistry,NA,NA,ready,stream_flux_inst__ms003,NA,NA,NA
 ms002,discharge,NA,NA,ready,stream_flux_inst__ms003,NA,NA,NA
 ms003,stream_flux_inst,NA,NA,ready,NA,NA,NA,NA

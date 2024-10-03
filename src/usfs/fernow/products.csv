@@ -12,3 +12,4 @@ ms005,CUSTOMprecipitation,NA,NA,linked,NA,automated entry,NA
 ms006,discharge,NA,NA,linked,NA,automated entry,NA
 ms007,stream_chemistry,NA,NA,linked,NA,automated entry,NA
 ms901,precip_chemistry,NA,NA,NA,NA,automated entry,NA
+ms008,stream_gauge_locations,,,ready,,,

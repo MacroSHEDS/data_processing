@@ -5,5 +5,5 @@
 "unit"	"The standard unit of the variable within the MacroSheds dataset"	"character"				
 "observations"	"The number of observations for this variable within the MacroSheds dataset"	"numeric"	"number"			
 "n_sites"	"The number of MacroSheds sites at which the variable is measured"	"numeric"	"number"			
-"first_record_utc"	"The date of the first occurrence of the variable within the MacroSheds dataset"	"Date"		"Y-M-DTh:m:sZ"		
-"last_record_utc"	"The date of the most recent occurrence of the variable within the MacroSheds dataset"	"Date"		"Y-M-DTh:m:sZ"		
+"first_record"	"The date of the first occurrence of the variable within the MacroSheds dataset"	"Date"		"Y-M-D"		
+"last_record"	"The date of the most recent occurrence of the variable within the MacroSheds dataset"	"Date"		"Y-M-D"		

@@ -1,0 +1,6 @@
+attributeName	code	definition
+method	average	mean annual discharge times mean annual solute concentration
+method	pw	period-weighted method, described in Aulenbach et al. 2016
+method	rating	rating method, AKA regression-model method, described in Aulenbach et al. 2016
+method	composite	composite method, described in Aulenbach et al. 2016
+method	beale	Beale ratio estimator, described in Meals et al. 2013, 'Pollutant Load Estimation for Water Quality Monitoring Projects'

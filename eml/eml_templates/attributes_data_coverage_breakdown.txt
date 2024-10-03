@@ -7,6 +7,6 @@
 "domain"	"Short name for MacroSheds domain. See sites.csv"	"character"				
 "site_code"	"Short name for MacroSheds site. See sites.csv"	"character"				
 "observations"	"Total number of observations"	"numeric"	"number"			
-"first_record_utc"	"The date and time of the first recorded time-series observation at the site, in UTC."	"Date"		"Y-M-DTh:m:sZ"		
-"last_record_utc"	"The date and time of the most recent recorded time-series observation at the site, in UTC."	"Date"		"Y-M-DTh:m:sZ"		
+"first_record"	"The date of the first recorded time-series observation at the site."	"Date"		"Y-M-D"		
+"last_record"	"The date of the most recent recorded time-series observation at the site."	"Date"		"Y-M-D"		
 "mean_obs_per_day"	"Mean number of observations per day over the period of measure"	"numeric"	"number"			

@@ -1474,7 +1474,7 @@ rebuild_derived_docfiles <- function(network_domain){
 
 get_nonnumerics <- function(d){
 
-    #gets unique nonnumeric values by row. useful for identifying quality codes
+    #gets unique nonnumeric values by column. useful for identifying quality codes
     #within data columns
 
     nonnumerics = apply(d, 2, function(x){
@@ -1484,6 +1484,20 @@ get_nonnumerics <- function(d){
     })
 
     return(nonnumerics)
+}
+
+get_big_negatives <- function(d, thresh = -10){
+
+    #gets big negative values by column. useful for identifying NA codes like -999
+    #within data columns
+
+    bignegs = apply(d, 2, function(x){
+        xx = as.numeric(x)
+        bns = xx < thresh
+        out = unique(x[bns])
+    })
+
+    return(bignegs)
 }
 
 ms_dl_history <- function(z) {

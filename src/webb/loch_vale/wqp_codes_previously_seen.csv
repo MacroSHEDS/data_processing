@@ -1,0 +1,94 @@
+parameter_cd,parameter_group_nm,parameter_nm,casrn,srsname,parameter_units
+00010,Physical,"Temperature, water, degrees Celsius", ,"Temperature, water",deg C
+00020,Physical,"Temperature, air, degrees Celsius", ,"Temperature, air, deg C",deg C
+00028,Information,"Agency analyzing sample, code", , ,code
+00060,Physical,"Discharge, cubic feet per second", ,"Stream flow, mean. daily",ft3/s
+00061,Physical,"Discharge, instantaneous, cubic feet per second", ,"Stream flow, instantaneous",ft3/s
+00065,Physical,"Gage height, feet", ,"Height, gage",ft
+00080,Physical,"Color, water, filtered, platinum cobalt units", ,Color,PCU
+00095,Physical,"Specific conductance, water, unfiltered, microsiemens per centimeter at 25 degrees Celsius", ,Specific conductance,uS/cm @25C
+00191,"Inorganics, Major, Non-metals","Hydrogen ion, water, unfiltered, calculated, milligrams per liter",12408-02-5,Hydrogen ion,mg/l
+00300,"Inorganics, Major, Non-metals","Dissolved oxygen, water, unfiltered, milligrams per liter",7782-44-7,Oxygen,mg/l
+00400,Physical,"pH, water, unfiltered, field, standard units", ,pH,std units
+00403,Physical,"pH, water, unfiltered, laboratory, standard units", ,"pH, lab",std units
+00405,"Inorganics, Major, Non-metals","Carbon dioxide, water, unfiltered, milligrams per liter",124-38-9,Carbon dioxide,mg/l
+00408,Physical,"pH, water, filtered, laboratory, standard units", , ,std units
+00409,"Inorganics, Major, Non-metals","Acid neutralizing capacity, water, unfiltered, Gran titration, microequivalents per liter", ,Alkalinity,ueq/L
+00413,"Inorganics, Major, Non-metals","Acid neutralizing capacity, water, unfiltered, Gran titration, milligrams per liter as calcium carbonate", ,Alkalinity,mg/l CaCO3
+00435,"Inorganics, Major, Non-metals","Acidity, water, unfiltered, milligrams per liter as calcium carbonate", ,Acidity,mg/l CaCO3
+00600,Nutrient,"Total nitrogen [nitrate + nitrite + ammonia + organic-N], water, unfiltered, milligrams per liter", ,"Nitrogen, mixed forms (NH3), (NH4), organic, (NO2) and (NO3)",mg/l
+00602,Nutrient,"Total nitrogen [nitrate + nitrite + ammonia + organic-N], water, filtered, milligrams per liter", ,"Nitrogen, mixed forms (NH3), (NH4), organic, (NO2) and (NO3)",mg/l
+00608,Nutrient,"Ammonia (NH3 + NH4+), water, filtered, milligrams per liter as nitrogen", ,Ammonia and ammonium,mg/l as N
+00610,Nutrient,"Ammonia (NH3 + NH4+), water, unfiltered, milligrams per liter as nitrogen", ,Ammonia and ammonium,mg/l as N
+00613,Nutrient,"Nitrite, water, filtered, milligrams per liter as nitrogen",14797-65-0,Nitrite,mg/l as N
+00615,Nutrient,"Nitrite, water, unfiltered, milligrams per liter as nitrogen",14797-65-0,Nitrite,mg/l as N
+00618,Nutrient,"Nitrate, water, filtered, milligrams per liter as nitrogen",14797-55-8,Nitrate,mg/l as N
+00620,Nutrient,"Nitrate, water, unfiltered, milligrams per liter as nitrogen",14797-55-8,Nitrate,mg/l as N
+00630,Nutrient,"Nitrate plus nitrite, water, unfiltered, milligrams per liter as nitrogen", ,Inorganic nitrogen (nitrate and nitrite),mg/l as N
+00631,Nutrient,"Nitrate plus nitrite, water, filtered, milligrams per liter as nitrogen", ,Inorganic nitrogen (nitrate and nitrite),mg/l as N
+00650,Nutrient,"Phosphate, water, unfiltered, milligrams per liter as PO4", ,Phosphate-phosphorus,mg/l
+00660,Nutrient,"Orthophosphate, water, filtered, milligrams per liter as PO4",14265-44-2,Phosphate,mg/l asPO4
+00665,Nutrient,"Phosphorus, water, unfiltered, milligrams per liter as phosphorus",7723-14-0,Phosphorus,mg/l as P
+00671,Nutrient,"Orthophosphate, water, filtered, milligrams per liter as phosphorus",14265-44-2,Phosphate,mg/l as P
+00681,"Organics, Other","Organic carbon, water, filtered, milligrams per liter", ,Organic carbon,mg/l
+00694,"Inorganics, Major, Non-metals","Carbon [inorganic plus organic], suspended sediment, total, milligrams per liter",7440-44-0,Total Carbon,mg/l
+00900,Physical,"Hardness, water, milligrams per liter as calcium carbonate", ,Total hardness -- SDWA NPDWR,mg/l CaCO3
+00905,Physical,"Noncarbonate hardness, water, filtered, lab, milligrams per liter as calcium carbonate", ,"Hardness, non-carbonate",mg/l CaCO3
+00915,"Inorganics, Major, Metals","Calcium, water, filtered, milligrams per liter",7440-70-2,Calcium,mg/l
+00925,"Inorganics, Major, Metals","Magnesium, water, filtered, milligrams per liter",7439-95-4,Magnesium,mg/l
+00930,"Inorganics, Major, Metals","Sodium, water, filtered, milligrams per liter",7440-23-5,Sodium,mg/l
+00931,"Inorganics, Major, Metals","Sodium adsorption ratio (SAR), water, number", ,Sodium adsorption ratio,None
+00932,"Inorganics, Major, Metals","Sodium fraction of cations, water, percent in equivalents of major cations", ,"Sodium, percent total cations",%
+00935,"Inorganics, Major, Metals","Potassium, water, filtered, milligrams per liter",7440-09-7,Potassium,mg/l
+00940,"Inorganics, Major, Non-metals","Chloride, water, filtered, milligrams per liter",16887-00-6,Chloride,mg/l
+00945,"Inorganics, Major, Non-metals","Sulfate, water, filtered, milligrams per liter",14808-79-8,Sulfate,mg/l
+00950,"Inorganics, Major, Non-metals","Fluoride, water, filtered, milligrams per liter",16984-48-8,Fluoride,mg/l
+00955,"Inorganics, Major, Non-metals","Silica, water, filtered, milligrams per liter as SiO2",7631-86-9,Silica,mg/l
+01046,"Inorganics, Minor, Metals","Iron, water, filtered, micrograms per liter",7439-89-6,Iron,ug/l
+01056,"Inorganics, Minor, Metals","Manganese, water, filtered, micrograms per liter",7439-96-5,Manganese,ug/l
+01080,"Inorganics, Minor, Metals","Strontium, water, filtered, micrograms per liter",7440-24-6,Strontium,ug/l
+01106,"Inorganics, Minor, Metals","Aluminum, water, filtered, micrograms per liter",7429-90-5,Aluminum,ug/l
+29803,"Inorganics, Major, Non-metals","Alkalinity, water, filtered, Gran titration, laboratory, milligrams per liter as calcium carbonate", ,Alkalinity,mg/l CaCO3
+30207,Physical,"Gage height, above datum, meters", ,Gage height,m
+30208,Physical,"Discharge, cubic meters per second", , ,m3/sec
+30209,Physical,"Discharge, instantaneous, cubic meters per second", ,"Stream flow, instantaneous",m3/sec
+32209,Biological,"Chlorophyll a, water, fluorometric method, corrected, micrograms per liter",479-61-8,Chlorophyll a,ug/l
+39087,"Inorganics, Major, Non-metals","Alkalinity, water, filtered, inflection-point titration method (incremental titration method), laboratory, milligrams per liter as calcium carbonate", ,Alkalinity,mg/l CaCO3
+49570,Nutrient,"Particulate nitrogen, suspended in water, milligrams per liter",7727-37-9,Nitrogen,mg/l
+50280,Information,"Site visit purpose, code", , ,code
+50284,"Organics, Other","Methylmercury, water, unfiltered, recoverable, nanograms per liter",22967-92-6,Methylmercury(1+),ng/l
+50286,"Inorganics, Minor, Metals","Mercury, water, unfiltered, nanograms per liter",7439-97-6,Mercury,ng/l
+50624,Physical,"Absorbance, 254 nm, water, filtered, absorbance units per centimeter", ,UV 254 -- SDWA NPDWR,units/cm
+62854,Nutrient,"Total nitrogen [nitrate + nitrite + ammonia + organic-N], water, filtered, analytically determined, milligrams per liter", ,"Nitrogen, mixed forms (NH3), (NH4), organic, (NO2) and (NO3)",mg/l
+63041,Stable Isotopes,"delta oxygen-18/oxygen-16 of nitrate, water, filtered, per mil",14797-71-8,Oxygen-18/Oxygen-16 ratio,per mil
+63162,"Organics, Other","Specific UV Absorbance, 254 nm, water, filtered, 1 cm path length, calculated, liter per (milligram of dissolved organic carbon * meter)", ,UV 254 -- SDWA NPDWR,L/mgDOC*m
+70301,Physical,"Dissolved solids, water, filtered, sum of constituents, milligrams per liter", ,Total dissolved solids,mg/l
+70302,Physical,"Dissolved solids, water, short tons per day", ,Total dissolved solids,tons/day
+70303,Physical,"Dissolved solids, water, filtered, short tons per acre-foot", ,Total dissolved solids,tons/ac ft
+70507,Nutrient,"Orthophosphate, water, unfiltered, milligrams per liter as phosphorus",14265-44-2,Phosphate,mg/l as P
+71825,"Inorganics, Major, Non-metals","Acidity, water, unfiltered, heated, milligrams per liter as hydrogen ion", ,Acidity,mg/l as H
+71845,Nutrient,"Ammonia (NH3 + NH4+), water, unfiltered, milligrams per liter as NH4", ,Ammonia and ammonium,mg/l NH4
+71846,Nutrient,"Ammonia (NH3 + NH4+), water, filtered, milligrams per liter as NH4", ,Ammonia and ammonium,mg/l NH4
+71851,Nutrient,"Nitrate, water, filtered, milligrams per liter as nitrate",14797-55-8,Nitrate,mg/l asNO3
+71856,Nutrient,"Nitrite, water, filtered, milligrams per liter as nitrite",14797-65-0,Nitrite,mg/l asNO2
+71870,"Inorganics, Major, Non-metals","Bromide, water, filtered, milligrams per liter",24959-67-9,Bromide,mg/l
+71999,Information,"Sample purpose, code", , ,code
+75978,Stable Isotopes,"Strontium-87/strontium-86, water, filtered, ratio",13982-64-4,"Strontium-87/strontium-86, ratio",ratio
+82082,Stable Isotopes,"delta hydrogen-2/hydrogen-1, water, unfiltered, per mil",7782-39-0,Deuterium/Hydrogen ratio,per mil
+82085,Stable Isotopes,"delta oxygen-18/oxygen-16, water, unfiltered, per mil",14797-71-8,Oxygen-18/Oxygen-16 ratio,per mil
+82086,Stable Isotopes,"delta sulfur-34/sulfur-32, water, unfiltered, per mil", ,Sulfur-34/Sulfur-32 ratio,per mil
+82398,Information,"Sampling method, code", , ,code
+82690,Stable Isotopes,"delta nitrogen-15/nitrogen-14 of nitrate, water, filtered, per mil", ,Nitrogen-15/14 ratio,per mil
+84164,Information,"Sampler type, code", , ,code
+90095,Physical,"Specific conductance, water, unfiltered, laboratory, microsiemens per centimeter at 25 degrees Celsius", ,Specific conductance,uS/cm @25C
+90410,"Inorganics, Major, Non-metals","Acid neutralizing capacity, water, unfiltered, fixed endpoint (pH 4.5) titration, laboratory, milligrams per liter as calcium carbonate", ,Alkalinity,mg/l CaCO3
+91000,"Inorganics, Major, Non-metals","Bromide, water, filtered, micrograms per liter",24959-67-9,Bromide,ug/l
+91001,"Inorganics, Major, Non-metals","Chloride, water, filtered, micrograms per liter",16887-00-6,Chloride,ug/l
+91002,"Inorganics, Major, Non-metals","Fluoride, water, filtered, micrograms per liter",16984-48-8,Fluoride,ug/l
+91003,Nutrient,"Nitrate, water, filtered, micrograms per liter as nitrate",14797-55-8,Nitrate,ug/l
+91004,Nutrient,"Orthophosphate, water, filtered, micrograms per liter as phosphorus",14265-44-2,Phosphate,ug/L as P
+91005,"Inorganics, Major, Non-metals","Sulfate, water, filtered, micrograms per liter",14808-79-8,Sulfate,ug/l
+91054,"Inorganics, Major, Metals","Potassium, water, filtered, micrograms per liter",7440-09-7,Potassium,ug/l
+99111,Information,"Type of quality assurance data associated with sample, code", , ,code
+99156,Information,"Sulfuric acid NWIS lot number, 4.5 N (1:7), 1 mL, National Field Supply Service (NFSS) stock number Q438FLD", , ,nu
+99206,Information,"NWIS lot number, capsule filter, 0.45 micron", , ,nu

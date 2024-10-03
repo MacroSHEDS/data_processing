@@ -1,12 +1,16 @@
 prodcode,prodname,retrieve_status,munge_status,derive_status,precursor_of,notes,components,url
-VERSIONLESS001,precipitation,ready,ready,NA,precip_pchem_pflux__ms004,,NTN-CO98-w.csv,http://nadp2.slh.wisc.edu/datalib/ntn/weekly/NTN-CO98-w.csv
-VERSIONLESS002,precip_chemistry,ready,ready,NA,precip_pchem_pflux__ms004,,NTN-CO98-w.csv,http://nadp2.slh.wisc.edu/datalib/ntn/weekly/NTN-CO98-w.csv
-VERSIONLESS006,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,NA,loch_vale_chem_andrews_creek,
-VERSIONLESS007,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,NA,loch_vale_chem_icy_brook,
-VERSIONLESS008,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,NA,loch_vale_chem_loch_outlet,
+VERSIONLESS001,precipitation,ready,ready,NA,precip_pchem_pflux__ms004,NA,NTN-CO98-w.csv,http://nadp2.slh.wisc.edu/datalib/ntn/weekly/NTN-CO98-w.csv
+VERSIONLESS002,precip_chemistry,ready,ready,NA,precip_pchem_pflux__ms004,NA,NTN-CO98-w.csv,http://nadp2.slh.wisc.edu/datalib/ntn/weekly/NTN-CO98-w.csv
+VERSIONLESS006,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,NA,loch_vale_chem_andrews_creek,NA
+VERSIONLESS007,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,NA,loch_vale_chem_icy_brook,NA
+VERSIONLESS008,stream_chemistry,ready,ready,NA,stream_chemistry__ms002,NA,loch_vale_chem_loch_outlet,NA
 ms001,discharge,NA,NA,ready,stream_flux_inst__ms003,NA,NA,NA
 ms002,stream_chemistry,NA,NA,ready,stream_flux_inst__ms003,NA,NA,NA
 ms003,stream_flux_inst,NA,NA,ready,NA,NA,NA,NA
 ms004,precip_pchem_pflux,NA,NA,ready,NA,NA,NA,NA
-ms005,precip_gauge_locations,NA,NA,ready,precip_pchem_pflux__ms005,NA,NA,NA
+ms005,precip_gauge_locations,NA,NA,ready,precip_pchem_pflux__ms004,NA,NA,NA
 ms006,stream_gauge_locations,NA,NA,ready,stream_flux_inst__ms003,NA,NA,NA
+ms000,ws_boundary,NA,NA,NA,precip_pchem_pflux__ms004,automated entry,NA,NA
+ms900,precipitation,NA,NA,NA,NA,automated entry,NA,NA
+ms901,precip_chemistry,NA,NA,NA,NA,automated entry,NA,NA
+ms902,precip_flux_inst,NA,NA,NA,NA,automated entry,NA,NA

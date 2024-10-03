@@ -1,7 +1,7 @@
 
 #retrieval kernels ####
 
-#discharge; stream_chemistry; CUSTOMprecipitation; precip_chemistry; CUSTOMprecip_flux_inst_scaled; CUSTOMstream_flux_inst_scaled: STATUS=READY
+#discharge; stream_chemistry; precipitation; precip_chemistry; CUSTOMprecip_flux_inst_scaled; CUSTOMstream_flux_inst_scaled: STATUS=READY
 #. handle_errors
 process_0_VERSIONLESS001 <- function(set_details, network, domain){
 
@@ -39,8 +39,8 @@ p1v001_discharge <- function(zipf){
         mutate(site = 'mountain_creek_tributary')
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('Date' = '%m/%d/%Y %H:%M:%S'),
-                         datetime_tz = 'America/New_York', #assumed. could be utc
+                         datetime_cols = c('Date' = '%m/%d/%Y %H:%M:%S'),
+                         datetime_tz = 'Etc/GMT+5',
                          site_code_col = 'site',
                          data_cols =  c('Streamflow' = 'discharge'),
                          data_col_pattern = '#V#',
@@ -63,8 +63,8 @@ p1v001_stream_chemistry <- function(zipf){
         mutate(site = 'mountain_creek_tributary')
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('Date' = '%m/%d/%Y %H:%M:%S'),
-                         datetime_tz = 'America/New_York', #assumed. could be utc
+                         datetime_cols = c('Date' = '%m/%d/%Y %H:%M:%S'),
+                         datetime_tz = 'Etc/GMT+5',
                          site_code_col = 'site',
                          data_cols =  c(
                              "pH"  =  "pH",
@@ -100,35 +100,37 @@ p1v001_stream_chemistry <- function(zipf){
         'DOC' = c('umol/l', 'mg/l')
     )
 
-    update_detlims(d, var_deets)
+    update_detlims(d, sapply(var_deets, function(x) x[1]))
 
-    d <- ms_conversions(d,
+    d <- ms_conversions_(d,
                         convert_units_from = sapply(var_deets, function(x) x[1]),
                         convert_units_to = sapply(var_deets, function(x) x[2]))
 
     return(d)
 }
 
-p1v001_CUSTOMprecipitation <- function(zipf){
+p1v001_precipitation <- function(zipf){
 
     d <- read.csv(unz(zipf, '1_PMRW_Precipitation_WY86-18.csv'),
                         header = TRUE, sep = ",") %>%
         as_tibble() %>%
-        mutate(site = 'granite_etc')
+        mutate(site = '333800084103600')
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('Date' = '%m/%d/%Y %H:%M:%S'),
-                         datetime_tz = 'America/New_York', #assumed. could be utc
+                         datetime_cols = c('Date' = '%m/%d/%Y %H:%M:%S'),
+                         datetime_tz = 'Etc/GMT+5',
                          site_code_col = 'site',
                          data_cols =  c('Precip' = 'precipitation'),
                          data_col_pattern = '#V#',
                          summary_flagcols = "Quality_Cd",
-                         is_sensor = TRUE)
+                         is_sensor = TRUE,
+                         keep_empty_rows = TRUE)
 
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA,
                             summary_flags_clean = list(Quality_Cd = c('1', '2')),
-                            summary_flags_dirty = list(Quality_Cd = c('3', '4')))
+                            summary_flags_dirty = list(Quality_Cd = c('3', '4')),
+                            keep_empty_rows = TRUE)
 
     d$val <- d$val * 10 #cm -> mm
 
@@ -140,11 +142,11 @@ p1v001_precip_chemistry <- function(zipf){
     d <- read.csv(unz(zipf, '2_PMRW_PrecipitationWaterQuality_WY86-17.csv'),
                   header = TRUE, sep = ",") %>%
         as_tibble() %>%
-        mutate(site = 'granite_etc')
+        mutate(site = '333800084103600')
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('Date' = '%m/%d/%Y %H:%M:%S'),
-                         datetime_tz = 'America/New_York', #assumed. could be utc
+                         datetime_cols = c('Date' = '%m/%d/%Y %H:%M:%S'),
+                         datetime_tz = 'Etc/GMT+5',
                          site_code_col = 'site',
                          data_cols = c(
                              "ANC_Conc" = "ANC",
@@ -163,12 +165,14 @@ p1v001_precip_chemistry <- function(zipf){
                          convert_to_BDL_flag = '<#*#',
                          summary_flagcols = 'Notes',
                          is_sensor = FALSE,
-                         keep_bdl_values = TRUE)
+                         keep_bdl_values = TRUE,
+                         keep_empty_rows = TRUE)
 
     d <- ms_cast_and_reflag(d,
                             summary_flags_clean = list(Notes = ''),
-                            summary_flags_to_drop = list(Notes = 'this string will never match'), #mark any string as "dirty"
-                            variable_flags_bdl = 'BDL')
+                            summary_flags_to_drop = list(Notes = 'sentinel'),
+                            variable_flags_bdl = 'BDL',
+                            keep_empty_rows = TRUE)
 
     var_deets <- list(
         'ANC' = c('ueq/l', 'eq/l'),
@@ -183,15 +187,18 @@ p1v001_precip_chemistry <- function(zipf){
         'Cl' = c('ueq/l', 'mg/l')
     )
 
-    update_detlims(d, var_deets)
+    update_detlims(d, lapply(var_deets, function(x) x[1]))
 
-    d <- ms_conversions(d,
+    d <- ms_conversions_(d,
                         convert_units_from = sapply(var_deets, function(x) x[1]),
                         convert_units_to = sapply(var_deets, function(x) x[2]))
 
     return(d)
 }
 
+#new protocol is to ensure that CUSTOM prods are unscaled when they leave the kernel,
+#so that they can be scaled along with the others in postprocessing. exception
+#was written in 2024 for panola, but let's not require exceptions in future.
 p1v001_CUSTOMprecip_flux_inst_scaled <- function(zipf){
 
     d <- read.csv(unz(zipf, '8_PMRW_WetDepositionSoluteFluxes_Daily_WY86-17.csv'),
@@ -200,8 +207,8 @@ p1v001_CUSTOMprecip_flux_inst_scaled <- function(zipf){
         mutate(site = 'mountain_creek_tributary')
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('Date' = '%m/%d/%Y'),
-                         datetime_tz = 'America/New_York', #assumed. could be utc
+                         datetime_cols = c('Date' = '%m/%d/%Y'),
+                         datetime_tz = 'Etc/GMT+5',
                          site_code_col = 'site',
                          data_cols =  c('H_WetDep' = 'H',
                                         'Ca_WetDep' = 'Ca',
@@ -230,12 +237,14 @@ p1v001_CUSTOMprecip_flux_inst_scaled <- function(zipf){
         'Cl' = c('ueq/l', 'kg/l')
     )
 
-    d <- ms_conversions(d,
+    d <- ms_conversions_(d,
                         convert_units_from = sapply(var_deets, function(x) x[1]),
                         convert_units_to = sapply(var_deets, function(x) x[2]))
 
     d$val <- d$val * 10000 #m^-2 -> ha^-1
     d$datetime <- floor_date(d$datetime, unit = 'day')
+    d$ms_interp <- 0
+    d$val_err <- 0
 
     writedir <- 'data/webb/panola/munged/CUSTOMprecip_flux_inst_scaled__VERSIONLESS001'
     dir.create(writedir,
@@ -247,6 +256,9 @@ p1v001_CUSTOMprecip_flux_inst_scaled <- function(zipf){
     return(d)
 }
 
+#new protocol is to ensure that CUSTOM prods are unscaled when they leave the kernel,
+#so that they can be scaled along with the others in postprocessing. exception
+#was written in 2024 for panola, but let's not require exceptions in future.
 p1v001_CUSTOMstream_flux_inst_scaled <- function(zipf, colname){
 
     d <- read.csv(unz(zipf, '11_PMRW_StreamwaterSoluteFluxes_Daily_WY86-16.csv'),
@@ -258,8 +270,8 @@ p1v001_CUSTOMstream_flux_inst_scaled <- function(zipf, colname){
         mutate(site = 'mountain_creek_tributary')
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('Date' = '%m/%d/%Y'),
-                         datetime_tz = 'America/New_York', #assumed. could be utc
+                         datetime_cols = c('Date' = '%m/%d/%Y'),
+                         datetime_tz = 'Etc/GMT+5',
                          site_code_col = 'site',
                          data_cols =  c('ANC', 'Ca', 'Mg', 'Na', 'K', 'SO4',
                                         'NO3', 'Cl', 'Si', 'DOC'),
@@ -285,12 +297,14 @@ p1v001_CUSTOMstream_flux_inst_scaled <- function(zipf, colname){
         'DOC' = c('umol/l', 'kg/l')
     )
 
-    d <- ms_conversions(d,
+    d <- ms_conversions_(d,
                         convert_units_from = sapply(var_deets, function(x) x[1]),
                         convert_units_to = sapply(var_deets, function(x) x[2]))
 
     d$val <- d$val * 10000 #m^-2 -> ha^-1
     d$datetime <- floor_date(d$datetime, unit = 'day')
+    d$ms_interp <- 0
+    d$val_err <- 0
 
     writedir <- 'data/webb/panola/munged/CUSTOMstream_flux_inst_scaled__VERSIONLESS001'
     writedir <- paste(writedir, colname, sep = '_')
@@ -301,9 +315,9 @@ p1v001_CUSTOMstream_flux_inst_scaled <- function(zipf, colname){
     write_feather(d, file.path(writedir, 'mountain_creek_tributary.feather'))
 }
 
-#discharge; stream_chemistry; CUSTOMprecipitation; precip_chemistry; CUSTOMprecip_flux_inst_scaled; CUSTOMstream_flux_inst_scaled: STATUS=READY
+#discharge; stream_chemistry; precipitation; precip_chemistry; CUSTOMprecip_flux_inst_scaled; CUSTOMstream_flux_inst_scaled: STATUS=READY
 #. handle_errors
-process_1_VERSIONLESS001 <-function(network, domain, prodname_ms, site_code, component){
+process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, component){
 
     raw_data_loc <- glue('data/{n}/{d}/raw/{p}/{s}',
                          n = network,
@@ -320,14 +334,15 @@ process_1_VERSIONLESS001 <-function(network, domain, prodname_ms, site_code, com
         d <- p1v001_discharge(zipf)
     } else if(prodname == 'stream_chemistry'){
         d <- p1v001_stream_chemistry(zipf)
-    } else if(prodname == 'CUSTOMprecipitation'){
-        d <- p1v001_CUSTOMprecipitation(zipf)
+    } else if(prodname == 'precipitation'){
+        d <- p1v001_precipitation(zipf)
     } else if(prodname == 'precip_chemistry'){
         d <- p1v001_precip_chemistry(zipf)
     } else if(prodname == 'CUSTOMprecip_flux_inst_scaled'){
         p1v001_CUSTOMprecip_flux_inst_scaled(zipf)
         return()
     } else if(prodname == 'CUSTOMstream_flux_inst_scaled'){
+        #all different models. 4 different custom stream fluxes
         p1v001_CUSTOMstream_flux_inst_scaled(zipf, colname = 'Flx_RefTot')
         p1v001_CUSTOMstream_flux_inst_scaled(zipf, colname = 'Flx_RefMod')
         p1v001_CUSTOMstream_flux_inst_scaled(zipf, colname = 'Flx_ClmTot')
@@ -337,7 +352,13 @@ process_1_VERSIONLESS001 <-function(network, domain, prodname_ms, site_code, com
 
     d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
-    d <- synchronize_timestep(d)
+    if(prodname %in% c('precip_chemistry', 'precipitation')){
+        d <- synchronize_timestep(d,
+                                  admit_NAs = TRUE,
+                                  allow_pre_interp = TRUE)
+    } else {
+        d <- synchronize_timestep(d)
+    }
 
     sites <- unique(d$site_code)
 
@@ -366,3 +387,11 @@ process_2_ms001 <- derive_stream_flux
 #stream_gauge_locations: STATUS=READY
 #. handle_errors
 process_2_ms002 <- stream_gauge_from_site_data
+
+#precip_gauge_locations: STATUS=READY
+#. handle_errors
+process_2_ms003 <- precip_gauge_from_site_data
+
+#precip_pchem_pflux: STATUS=READY
+#. handle_errors
+process_2_ms004 <- derive_precip_pchem_pflux

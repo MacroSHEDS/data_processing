@@ -450,7 +450,7 @@ process_1_2465 <- function(network, domain, prodname_ms, site_code, components) 
     names(all) <- c('SiteCode', 'date', 'temperature')
 
     d <- ms_read_raw_csv(preprocessed_tibble = all,
-                         datetime_cols = list('date' = '%Y%m%d %H:%S'),
+                         datetime_cols = c('date' = '%Y%m%d %H:%S'),
                          datetime_tz = 'US/Eastern',
                          site_code_col = 'SiteCode',
                          alt_site_code = list('WCCLAB' = 'WCCLABTEMP'),
@@ -510,7 +510,7 @@ process_1_1001 <- function(network, domain, prodname_ms, site_code, component) {
     d['time'] <- d_time_co
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('date' = '%Y%m%d',
+                         datetime_cols = c('date' = '%Y%m%d',
                                               'time' = '%H:%M'),
                          datetime_tz = 'US/Eastern',
                          site_code_col = 'site',
@@ -540,7 +540,7 @@ process_1_2565 <- function(network, domain, prodname_ms, site_code, components) 
             mutate(site = 'SWRC_met')
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('Year' = '%Y',
+                         datetime_cols = c('Year' = '%Y',
                                               'Month' = '%m',
                                               'Date' = '%e',
                                               'Hour' = '%H'),

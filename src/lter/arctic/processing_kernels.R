@@ -135,7 +135,7 @@ process_1_10601 <- function(network, domain, prodname_ms, site_code,
     if(prodname_ms == 'discharge__10601'){
 
         d <- ms_read_raw_csv(preprocessed_tibble = d,
-                             datetime_cols = list('Date' = '%Y-%m-%d',
+                             datetime_cols = c('Date' = '%Y-%m-%d',
                                                   'Time' = '%H:%M'),
                              datetime_tz = 'America/Anchorage',
                              site_code_col = 'River',
@@ -154,7 +154,7 @@ process_1_10601 <- function(network, domain, prodname_ms, site_code,
     } else{
 
         d <- ms_read_raw_csv(preprocessed_tibble = d,
-                             datetime_cols = list('Date' = '%Y-%m-%d',
+                             datetime_cols = c('Date' = '%Y-%m-%d',
                                                   'Time' = '%H:%M'),
                              datetime_tz = 'America/Anchorage',
                              site_code_col = 'River',
@@ -193,7 +193,7 @@ process_1_20118 <- function(network, domain, prodname_ms, site_code,
   if(prodname_ms == 'discharge__20118'){
 
       d <- ms_read_raw_csv(preprocessed_tibble = d,
-                           datetime_cols = list('Date' = '%Y-%m-%d',
+                           datetime_cols = c('Date' = '%Y-%m-%d',
                                                 'Time' = '%H:%M'),
                            datetime_tz = 'America/Anchorage',
                            site_code_col = 'River',
@@ -214,7 +214,7 @@ process_1_20118 <- function(network, domain, prodname_ms, site_code,
           rename(temperature = 8)
 
       d <- ms_read_raw_csv(preprocessed_tibble = d,
-                           datetime_cols = list('Date' = '%Y-%m-%d',
+                           datetime_cols = c('Date' = '%Y-%m-%d',
                                                 'Time' = '%H:%M'),
                            datetime_tz = 'America/Anchorage',
                            site_code_col = 'River',
@@ -282,62 +282,69 @@ process_1_10303 <- function(network, domain, prodname_ms, site_code,
     #Sestonic Particulate Phosphorus same as total particulate P?
     #Ommited Loss on Ignition but can always add back in
 
-    arctic_var_names <- c("Alkalinity", "Ammonium", "Carbon Dioxide", "Cations: Calcium",
-                          "Cations: Magnesium","Cations: Potassium",
-      "Cations: Sodium", "Chloride", "Dissolved Inorganic Carbon", "Dissolved Organic Carbon",
-      "Nitrate+Nitrite", "Sestonic Chlorophyll a", "Sestonic Particulate Carbon",
-      "Sestonic Particulate Nitrogen", "Sestonic Particulate Phosphorus",
-      "Sestonic Phaeopigment", "Silica", "Soluble Reactive Phosphorus", "Sulfate",
-      "Total Dissolved Nitrogen",  "Total Dissolved Phosphorus", "Cations: Aluminum",
-      "Cations: Boron", "Cations: Cadmium", "Cations: Chromium", "Cations: Copper", "Cations: Iron",
-      "Cations: Lead", "Cations: Manganese","Cations: Nickel", "Cations: Silicon",
-      "Cations: Strontium", "Cations: Sulfur", "Cations: Zinc", "Conductivity",
-      "Loss on Ignition", "pH", "Sestonic Phaeophytin", "Sestonic Total Chlorophyll",
-      "Specific Conductivity", "Temp when sample collected", "Total Suspended Sediment",
-      "Benthic Ash Free Dry Mass", "Benthic Particulate Carbon", "Benthic Particulate Nitrogen",
-      "Benthic Particulate Phosphorus", "Epilithic Chlorophyll a", "Epilithic Phaeophytin",
-      "Epilithic Total Chlorophyll", "Moss: Hygrohypnum: Aluminum", "Moss: Hygrohypnum: Boron",
-      "Moss: Hygrohypnum: Calcium", "Moss: Hygrohypnum: Carbon", "Moss: Hygrohypnum: Copper",
-      "Moss: Hygrohypnum: Iron", "Moss: Hygrohypnum: Magnesium", "Moss: Hygrohypnum: Manganese",
-      "Moss: Hygrohypnum: Nitrogen", "Moss: Hygrohypnum: Phosphorus", "Moss: Hygrohypnum: Potassium",
-      "Moss: Hygrohypnum: Sodium", "Moss: Hygrohypnum: Sulfur", "Moss: Hygrohypnum: Znnc",
-      "Moss: Schistidium: Aluminum", "Moss: Schistidium: Boron", "Moss: Schistidium: Calcium",
-      "Moss: Schistidium: Carbon", "Moss: Schistidium: Copper", "Moss: Schistidium: Iron",
-      "Moss: Schistidium: LOI", "Moss: Schistidium: Magnesium", "Moss: Schistidium: Manganese",
-      "Moss: Schistidium: Nitrogen", "Moss: Schistidium: Phosphorus","Moss: Schistidium: Potassium",
-      "Moss: Schistidium: Sodium", "Moss: Schistidium: Sulfur", "Moss: Schistidium: Zinc",
-      "Moss: Hygrohypnum: LOI", "Moss: Fontinalis: LOI", "Moss: Fontinalis: Nitrogen",
-      "Moss: Fontinalis: Phosphorus", "Moss: Lemanea: Aluminum", "Moss: Lemanea: Boron",
-      "Moss: Lemanea: Calcium", "Moss: Lemanea: Carbon", "Moss: Lemanea: Copper",
-      "Moss: Lemanea: Iron", "Moss: Lemanea: LOI", "Moss: Lemanea: Magnesium",
-      "Moss: Lemanea: Manganese", "Moss: Lemanea: Nitrogen", "Moss: Lemanea: Phosphorus",
-      "Moss: Lemanea: Potassium", "Moss: Lemanea: Sodium", "Moss: Lemanea: Sulfur" ,
-      "Moss: Lemanea: Zinc", "Moss: Liverwort: Aluminum", "Moss: Liverwort: Boron",
-      "Moss: Liverwort: Calcium", "Moss: Liverwort: Carbon", "Moss: Liverwort: Copper",
-      "Moss: Liverwort: Iron", "Moss: Liverwort: LOI", "Moss: Liverwort: Magnesium",
-      "Moss: Liverwort: Manganese", "Moss: Liverwort: Nitrogen", "Moss: Liverwort: Phosphorus",
-      "Moss: Liverwort: Potassium", "Moss: Liverwort: Sodium", "Moss: Liverwort: Sulfur",
-      "Moss: Liverwort: Zinc", "Moss: Fontinalis: Carbon", "Epilithic Phaeopigment", "Methane")
+    arctic_var_names <- c(
+        "Alkalinity", "Ammonium", "Carbon Dioxide", "Cations: Calcium",
+        "Cations: Magnesium","Cations: Potassium",
+        "Cations: Sodium", "Chloride", "Dissolved Inorganic Carbon", "Dissolved Organic Carbon",
+        "Nitrate+Nitrite", "Sestonic Chlorophyll a", "Sestonic Particulate Carbon",
+        "Sestonic Particulate Nitrogen", "Sestonic Particulate Phosphorus",
+        "Sestonic Phaeopigment", "Silica", "Soluble Reactive Phosphorus", "Sulfate",
+        "Total Dissolved Nitrogen",  "Total Dissolved Phosphorus", "Cations: Aluminum",
+        "Cations: Boron", "Cations: Cadmium", "Cations: Chromium", "Cations: Copper", "Cations: Iron",
+        "Cations: Lead", "Cations: Manganese","Cations: Nickel", "Cations: Silicon",
+        "Cations: Strontium", "Cations: Sulfur", "Cations: Zinc", "Conductivity",
+        "Loss on Ignition", "pH", "Sestonic Phaeophytin", "Sestonic Total Chlorophyll",
+        "Specific Conductivity", "Temp when sample collected", "Total Suspended Sediment",
+        "Benthic Ash Free Dry Mass", "Benthic Particulate Carbon", "Benthic Particulate Nitrogen",
+        "Benthic Particulate Phosphorus", "Epilithic Chlorophyll a", "Epilithic Phaeophytin",
+        "Epilithic Total Chlorophyll", "Epilithic Phaeopigment", "Methane"
+        # "Moss: Hygrohypnum: Aluminum", "Moss: Hygrohypnum: Boron",
+        # "Moss: Hygrohypnum: Calcium", "Moss: Hygrohypnum: Carbon", "Moss: Hygrohypnum: Copper",
+        # "Moss: Hygrohypnum: Iron", "Moss: Hygrohypnum: Magnesium", "Moss: Hygrohypnum: Manganese",
+        # "Moss: Hygrohypnum: Nitrogen", "Moss: Hygrohypnum: Phosphorus", "Moss: Hygrohypnum: Potassium",
+        # "Moss: Hygrohypnum: Sodium", "Moss: Hygrohypnum: Sulfur", "Moss: Hygrohypnum: Znnc",
+        # "Moss: Schistidium: Aluminum", "Moss: Schistidium: Boron", "Moss: Schistidium: Calcium",
+        # "Moss: Schistidium: Carbon", "Moss: Schistidium: Copper", "Moss: Schistidium: Iron",
+        # "Moss: Schistidium: LOI", "Moss: Schistidium: Magnesium", "Moss: Schistidium: Manganese",
+        # "Moss: Schistidium: Nitrogen", "Moss: Schistidium: Phosphorus","Moss: Schistidium: Potassium",
+        # "Moss: Schistidium: Sodium", "Moss: Schistidium: Sulfur", "Moss: Schistidium: Zinc",
+        # "Moss: Hygrohypnum: LOI", "Moss: Fontinalis: LOI", "Moss: Fontinalis: Nitrogen",
+        # "Moss: Fontinalis: Phosphorus", "Moss: Lemanea: Aluminum", "Moss: Lemanea: Boron",
+        # "Moss: Lemanea: Calcium", "Moss: Lemanea: Carbon", "Moss: Lemanea: Copper",
+        # "Moss: Lemanea: Iron", "Moss: Lemanea: LOI", "Moss: Lemanea: Magnesium",
+        # "Moss: Lemanea: Manganese", "Moss: Lemanea: Nitrogen", "Moss: Lemanea: Phosphorus",
+        # "Moss: Lemanea: Potassium", "Moss: Lemanea: Sodium", "Moss: Lemanea: Sulfur" ,
+        # "Moss: Lemanea: Zinc", "Moss: Liverwort: Aluminum", "Moss: Liverwort: Boron",
+        # "Moss: Liverwort: Calcium", "Moss: Liverwort: Carbon", "Moss: Liverwort: Copper",
+        # "Moss: Liverwort: Iron", "Moss: Liverwort: LOI", "Moss: Liverwort: Magnesium",
+        # "Moss: Liverwort: Manganese", "Moss: Liverwort: Nitrogen", "Moss: Liverwort: Phosphorus",
+        # "Moss: Liverwort: Potassium", "Moss: Liverwort: Sodium", "Moss: Liverwort: Sulfur",
+        # "Moss: Liverwort: Zinc", "Moss: Fontinalis: Carbon"
+    )
 
-    var_names <- tibble(Type = arctic_var_names,
-                        var = c('alk', 'NH4', 'CO2', 'Ca', 'Mg', 'K', 'Na', 'Cl',
-                                'DIC', 'DOC', 'NO3_NO2', 'CHL', 'TPC', 'TPN', 'TPP',
-                                'phaeopig', 'SiO2', 'SRP', 'SO4', 'TDN', 'TDP', 'Al',
-                                'B', 'Cd', 'Cr', 'Cu', 'Fe', 'Pb', 'Mn', 'Ni', 'Si',
-                                'Sr', 'S', 'Zn', 'spCond', NA, 'pH', 'pheophy', 'TCHL',
-                                'spCond', 'temp', 'TSS', NA, 'BPC', 'BPN', 'BPP',
-                                'ECHL_A', 'E_pheophy', 'T_ECHL', 'MH_Al', 'MH_B', 'MH_Ca',
-                                'MH_C', 'MH_Cu',  'MH_Fe', 'MH_Mg', 'MH_Mn', 'MH_N',
-                                'MH_P', 'MH_K', 'MH_Na', 'MH_S', 'MH_Zn', 'MS_Al',
-                                'MS_B', 'MS_Ca', 'MS_C', 'MS_Cu', 'MS_Fe', NA,
-                                'MS_Mg', 'MS_Mn', 'MS_N', 'MS_P', 'MS_K', 'MS_Na',
-                                'MS_S', 'MS_Zn', NA, NA, 'MF_N', 'MF_P',
-                                'ML_Al', 'ML_B', 'ML_Ca', 'ML_C', 'ML_Cu', 'ML_Fe',
-                                NA, 'ML_Mg', 'ML_Mn', 'ML_N', 'ML_P', 'ML_K',
-                                'ML_Na', 'ML_S', 'ML_Zn', 'MLW_Al', 'MLW_B', 'MLW_Ca',
-                                'MLW_C', 'MLW_Cu', 'MLW_Fe', NA, 'MLW_Mg', 'MLW_Mn',
-                                'MLW_N', 'MLW_P', 'MLW_K', 'MLW_Na', 'MLW_S', 'MLW_Zn',
-                                'MF_C', NA, 'CH4'))
+    var_names <- tibble(
+        Type = arctic_var_names,
+        var = c('alk', 'NH4', 'CO2', 'Ca', 'Mg', 'K', 'Na', 'Cl',
+                'DIC', 'DOC', 'NO3_NO2', 'Chla', 'TPC', 'TPN', 'TPP',
+                'pheopig', 'SiO2', 'orthophosphate_P', 'SO4', 'TDN', 'TDP', 'Al',
+                'B', 'Cd', 'Cr', 'Cu', 'Fe', 'Pb', 'Mn', 'Ni', 'Si',
+                'Sr', 'S', 'Zn', 'spCond', NA, 'pH', 'pheophy', 'Chl',
+                'spCond', 'temp', 'TSS', NA, 'BPC', 'BPN', 'BPP',
+                'E_Chla', 'E_pheophy', 'E_Chl', 'E_pheopig', 'CH4'
+                # 'MH_Al', 'MH_B', 'MH_Ca',
+                # 'MH_C', 'MH_Cu',  'MH_Fe', 'MH_Mg', 'MH_Mn', 'MH_N',
+                # 'MH_P', 'MH_K', 'MH_Na', 'MH_S', 'MH_Zn', 'MS_Al',
+                # 'MS_B', 'MS_Ca', 'MS_C', 'MS_Cu', 'MS_Fe', NA,
+                # 'MS_Mg', 'MS_Mn', 'MS_N', 'MS_P', 'MS_K', 'MS_Na',
+                # 'MS_S', 'MS_Zn', NA, NA, 'MF_N', 'MF_P',
+                # 'ML_Al', 'ML_B', 'ML_Ca', 'ML_C', 'ML_Cu', 'ML_Fe',
+                # NA, 'ML_Mg', 'ML_Mn', 'ML_N', 'ML_P', 'ML_K',
+                # 'ML_Na', 'ML_S', 'ML_Zn', 'MLW_Al', 'MLW_B', 'MLW_Ca',
+                # 'MLW_C', 'MLW_Cu', 'MLW_Fe', NA, 'MLW_Mg', 'MLW_Mn',
+                # 'MLW_N', 'MLW_P', 'MLW_K', 'MLW_Na', 'MLW_S', 'MLW_Zn',
+                # 'MF_C'
+        )
+    )
 
     d[d == '-9999'] <- NA
 
@@ -369,7 +376,7 @@ process_1_10303 <- function(network, domain, prodname_ms, site_code,
                                   network = network,
                                   prodname_ms = prodname_ms)
 
-    d <- ms_conversions(d,
+    d <- ms_conversions_(d,
                         convert_units_from = c(NH4 = 'umol/l',
                                                CO2 = 'umol/l',
                                                Ca = 'umol/l',
@@ -380,13 +387,13 @@ process_1_10303 <- function(network, domain, prodname_ms, site_code,
                                                DIC = 'umol/l',
                                                DOC = 'umol/l',
                                                NO3_NO2 = 'umol/l',
-                                               CHL = 'ug/l',
+                                               Chla = 'ug/l',
                                                TPC = 'ug/l',
                                                TPN = 'ug/l',
                                                TPP = 'ug/l',
-                                               phaeopig = 'ug/l',
+                                               pheopig = 'ug/l',
                                                SiO2 = 'umol/l',
-                                               SRP = 'umol/l',
+                                               orthophosphate_P = 'umol/l',
                                                SO4 = 'umol/l',
                                                TDN = 'umol/l',
                                                TDP = 'umol/l',
@@ -404,13 +411,13 @@ process_1_10303 <- function(network, domain, prodname_ms, site_code,
                                                S = 'umol/l',
                                                Zn = 'umol/l',
                                                pheophy = 'ug/l',
-                                               TCHL = 'ug/l',
+                                               Chl = 'ug/l',
                                                BPC = 'ug/cm2',
                                                BPN = 'ug/cm2',
                                                BPP = 'ug/cm2',
-                                               ECHL_A = 'ug/cm2',
+                                               E_Chla = 'ug/cm2',
                                                E_pheophy = 'ug/cm2',
-                                               T_ECHL = 'ug/cm2',
+                                               E_Chl = 'ug/cm2',
                                                CH4 = 'umol/l'),
                         convert_units_to = c(NH4 = 'mg/l',
                                              CO2 = 'mg/l',
@@ -422,13 +429,13 @@ process_1_10303 <- function(network, domain, prodname_ms, site_code,
                                              DIC = 'mg/l',
                                              DOC = 'mg/l',
                                              NO3_NO2 = 'mg/l',
-                                             CHL = 'mg/l',
+                                             Chla = 'mg/l',
                                              TPC = 'mg/l',
                                              TPN = 'mg/l',
                                              TPP = 'mg/l',
-                                             phaeopig = 'mg/l',
+                                             pheopig = 'mg/l',
                                              SiO2 = 'mg/l',
-                                             SRP = 'mg/l',
+                                             orthophosphate_P = 'mg/l',
                                              SO4 = 'mg/l',
                                              TDN = 'mg/l',
                                              TDP = 'mg/l',
@@ -446,13 +453,13 @@ process_1_10303 <- function(network, domain, prodname_ms, site_code,
                                              S = 'mg/l',
                                              Zn = 'mg/l',
                                              pheophy = 'mg/l',
-                                             TCHL = 'mg/l',
+                                             Chl = 'mg/l',
                                              BPC = 'mg/cm2',
                                              BPN = 'mg/cm2',
                                              BPP = 'mg/cm2',
-                                             ECHL_A = 'mg/cm2',
+                                             E_Chla = 'mg/cm2',
                                              E_pheophy = 'mg/cm2',
-                                             T_ECHL = 'mg/cm2',
+                                             E_Chl = 'mg/cm2',
                                              CH4 = 'mg/l'))
 
     remove_1_vars <- d %>%
@@ -483,19 +490,21 @@ process_1_1489 <- function(network, domain, prodname_ms, site_code,
                     c = component)
 
     d <- ms_read_raw_csv(filepath = rawfile,
-                         datetime_cols = list('Date' = '%Y%m%d'),
+                         datetime_cols = c('Date' = '%Y%m%d'),
                          datetime_tz = 'America/Anchorage',
                          site_code_col = 'Station',
                          data_cols = c('Daily_Precip_Total_mm' = 'precipitation'),
                          is_sensor = TRUE,
                          set_to_NA = '#N/A',
                          data_col_pattern = '#V#',
-                         summary_flagcols = 'Flag_Daily_Precip_Total_mm')
+                         summary_flagcols = 'Flag_Daily_Precip_Total_mm',
+                         keep_empty_rows = TRUE)
 
     d <- ms_cast_and_reflag(d,
                             summary_flags_to_drop = list('Flag_Daily_Precip_Total_mm' = 'ensuring any other flag gets ms_status of 0'),
                             summary_flags_dirty = list('Flag_Daily_Precip_Total_mm' = 'E'),
-                            varflag_col_pattern = NA)
+                            varflag_col_pattern = NA,
+                            keep_empty_rows = TRUE)
 
     return(d)
 }
@@ -520,7 +529,7 @@ process_1_20120 <- function(network, domain, prodname_ms, site_code,
     if(prodname_ms == 'discharge__20120'){
 
         d <- ms_read_raw_csv(preprocessed_tibble = d,
-                             datetime_cols = list('Date' = '%Y-%m-%d',
+                             datetime_cols = c('Date' = '%Y-%m-%d',
                                                   'Time' = '%H:%M'),
                              datetime_tz = 'America/Anchorage',
                              site_code_col = 'River',
@@ -545,7 +554,7 @@ process_1_20120 <- function(network, domain, prodname_ms, site_code,
     } else{
 
         d <- ms_read_raw_csv(preprocessed_tibble = d,
-                             datetime_cols = list('Date' = '%Y-%m-%d',
+                             datetime_cols = c('Date' = '%Y-%m-%d',
                                                   'Time' = '%H:%M'),
                              datetime_tz = 'America/Anchorage',
                              site_code_col = 'River',
@@ -665,7 +674,7 @@ process_1_10591 <- function(network, domain, prodname_ms, site_code,
     if(grepl('discharge', prodname_ms)){
 
         d <- ms_read_raw_csv(preprocessed_tibble = d,
-                             datetime_cols = list('Date_Time' = '%y-%m-%d %H:%M'),
+                             datetime_cols = c('Date_Time' = '%y-%m-%d %H:%M'),
                              datetime_tz = 'America/Anchorage',
                              site_code_col = 'site_code',
                              data_cols =  c('Q_m3sec' = 'discharge'),
@@ -683,7 +692,7 @@ process_1_10591 <- function(network, domain, prodname_ms, site_code,
     } else{
 
         d <- ms_read_raw_csv(preprocessed_tibble = d,
-                             datetime_cols = list('Date_Time' = '%y-%m-%d %H:%M'),
+                             datetime_cols = c('Date_Time' = '%y-%m-%d %H:%M'),
                              datetime_tz = 'America/Anchorage',
                              site_code_col = 'site_code',
                              data_cols =  c('Water_Temp_C' = 'temp',
@@ -719,7 +728,7 @@ process_1_20103 <- function(network, domain, prodname_ms, site_code,
     d <- d[4:nrow(d),]
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('date' = '%y-%m-%d %H:%M'),
+                         datetime_cols = c('date' = '%y-%m-%d %H:%M'),
                          datetime_tz = 'America/Anchorage',
                          site_code_col = 'site_code',
                          data_cols =  c('Nitrate..mg.L.' = 'NO3',
@@ -732,7 +741,7 @@ process_1_20103 <- function(network, domain, prodname_ms, site_code,
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
 
-    d <- ms_conversions(d,
+    d <- ms_conversions_(d,
                         convert_units_from = c('NO3' = 'mg/l'),
                         convert_units_to = c('NO3' = 'mg/l'))
 
@@ -758,7 +767,7 @@ process_1_20111 <- function(network, domain, prodname_ms, site_code,
     d <- d[4:nrow(d),]
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('date' = '%y-%m-%d %H:%M'),
+                         datetime_cols = c('date' = '%y-%m-%d %H:%M'),
                          datetime_tz = 'America/Anchorage',
                          site_code_col = 'site_code',
                          data_cols =  c('Nitrate..mg.L.' = 'NO3',
@@ -771,7 +780,7 @@ process_1_20111 <- function(network, domain, prodname_ms, site_code,
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
 
-    d <- ms_conversions(d,
+    d <- ms_conversions_(d,
                         convert_units_from = c('NO3' = 'mg/l'),
                         convert_units_to = c('NO3' = 'mg/l'))
 
@@ -799,7 +808,7 @@ process_1_20112 <- function(network, domain, prodname_ms, site_code,
     d <- d[4:nrow(d),]
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('date' = '%y-%m-%d %H:%M'),
+                         datetime_cols = c('date' = '%y-%m-%d %H:%M'),
                          datetime_tz = 'America/Anchorage',
                          site_code_col = 'site_code',
                          data_cols =  c('Nitrate..mg.L.' = 'NO3',
@@ -812,7 +821,7 @@ process_1_20112 <- function(network, domain, prodname_ms, site_code,
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
 
-    d <- ms_conversions(d,
+    d <- ms_conversions_(d,
                         convert_units_from = c('NO3' = 'mg/l'),
                         convert_units_to = c('NO3' = 'mg/l'))
 
@@ -879,11 +888,11 @@ process_2_ms005 <- derive_stream_flux
 
 #precipitation: STATUS=READY
 #. handle_errors
-process_2_ms006 <- function(network, domain, prodname_ms) {
+process_2_ms006 <- function(network, domain, prodname_ms){
 
     #Temporary, arctic only has 1 precip gauge. Eventually will
     #leverage other data to interpolate but for now directly linking gauge to
-    #watersheds (similar to neon)
+    #watersheds
 
     new_dir <- 'data/lter/arctic/derived/precipitation__ms006/'
     dir.create(new_dir, recursive = TRUE)
@@ -902,7 +911,6 @@ process_2_ms006 <- function(network, domain, prodname_ms) {
       write_feather(precip, glue('{n}{s}.feather',
                                  n = new_dir,
                                  s = sites[i]))
-
     }
 
     return()

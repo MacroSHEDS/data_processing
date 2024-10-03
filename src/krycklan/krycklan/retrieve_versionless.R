@@ -18,7 +18,7 @@ if(! is.null(prodname_filter)){
 
 if(nrow(prod_info) == 0) return()
 
-site_code <- 'sitecode_NA'
+site_code <- 'sitename_NA'
 
 for(i in seq_len(nrow(prod_info))){
 

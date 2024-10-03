@@ -14,6 +14,6 @@
 "ws_area_ha"	"Watershed area in hectares."	"numeric"	"hectare"		"NA"	"missing value"
 "n_observations"	"The number of time-series observations recorded at the site and stored in MacroSheds."	"numeric"	"number"		"NA"	"missing value"
 "n_variables"	"The number of time-series variables recorded at the site and stored in MacroSheds."	"numeric"	"number"		"NA"	"missing value"
-"first_record_utc"	"The date and time of the first recorded time-series observation at the site, in UTC."	"Date"		"Y-M-DTh:m:sZ"	"NA"	"missing value"
-"last_record_utc"	"The date and time of the most recent recorded time-series observation at the site, in UTC."	"Date"		"Y-M-DTh:m:sZ"	"NA"	"missing value"
+"first_record"	"The date of the first recorded time-series observation at the site."	"Date"		"Y-M-D"	"NA"	"missing value"
+"last_record"	"The date of the most recent recorded time-series observation at the site."	"Date"		"Y-M-D"	"NA"	"missing value"
 "timezone_olson"	"The timezone in which the site is located."	"character"			"NA"	"missing value"

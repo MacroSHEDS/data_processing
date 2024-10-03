@@ -585,9 +585,9 @@ process_1_155 <- function(network, domain, prodname_ms, site_code,
     if(grepl('stream_chemistry', prodname_ms)) {
 
         d <- ms_read_raw_csv(preprocessed_tibble = d,
-                             datetime_cols = list('Date' = '%Y-%m-%d',
+                             datetime_cols = c('Date' = '%Y-%m-%d',
                                                   'Time' = '%H:%M'),
-                             datetime_tz = 'US/Eastern',
+                             datetime_tz = 'Etc/GMT+5',
                              site_code_col = 'site_code',
                              data_cols =  c('Temp' = 'temp',
                                             'SpCond' = 'spCond'),
@@ -598,7 +598,7 @@ process_1_155 <- function(network, domain, prodname_ms, site_code,
         d <- ms_cast_and_reflag(d,
                                 varflag_col_pattern = NA)
 
-        d <- ms_conversions(d,
+        d <- ms_conversions_(d,
                             convert_units_from = c('spCond' = 'mS/cm'),
                             convert_units_to = c('spCond' = 'uS/cm'))
 
@@ -611,9 +611,9 @@ process_1_155 <- function(network, domain, prodname_ms, site_code,
         }
 
         d <- ms_read_raw_csv(preprocessed_tibble = d,
-                             datetime_cols = list('Date' = '%Y-%m-%d',
+                             datetime_cols = c('Date' = '%Y-%m-%d',
                                                   'Time' = '%H:%M'),
-                             datetime_tz = 'US/Eastern',
+                             datetime_tz = 'Etc/GMT+5',
                              site_code_col = 'site_code',
                              data_cols =  c('Discharge' = 'discharge'),
                              data_col_pattern = '#V#',
@@ -743,9 +743,9 @@ process_1_393 <-  function(network, domain, prodname_ms, site_code,
         mutate(site_code = !!site)
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('Date' = '%m/%e/%Y',
+                         datetime_cols = c('Date' = '%m/%e/%Y',
                                               'Time' = '%H:%M'),
-                         datetime_tz = 'US/Eastern',
+                         datetime_tz = 'Etc/GMT+5',
                          site_code_col = 'site_code',
                          data_cols =  c('Temp' = 'temp'),
                          data_col_pattern = '#V#',
@@ -859,9 +859,9 @@ process_1_104 <- function(network, domain, prodname_ms, site_code,
                    c = component)
 
     d <- ms_read_raw_csv(filepath = rawfile,
-                         datetime_cols = list('DATE' = '%Y-%m-%d',
+                         datetime_cols = c('DATE' = '%Y-%m-%d',
                                               'TIME' = '%H:%M'),
-                         datetime_tz = 'US/Eastern',
+                         datetime_tz = 'Etc/GMT+5',
                          site_code_col = 'STATION',
                          alt_site_code = list('muddy_run' = 'WAT-RO-MuddyRun',
                                               'little_river' = 'WAT-PR-LittleRiver',
@@ -881,7 +881,7 @@ process_1_104 <- function(network, domain, prodname_ms, site_code,
                                         'PP' = 'TPP',
                                         'TEMP' = 'temp',
                                         'POC', 'PON',
-                                        'CHLA' = 'CHL'),
+                                        'CHLA' = 'Chla'),
                          data_col_pattern = '#V#',
                          set_to_NA = c('NA ', ' '),
                          summary_flagcols = 'COMMENTS',
@@ -892,7 +892,7 @@ process_1_104 <- function(network, domain, prodname_ms, site_code,
                             summary_flags_to_drop = list('COMMENTS' = 'DROP'),
                             varflag_col_pattern = NA)
 
-    d <- ms_conversions(d,
+    d <- ms_conversions_(d,
                         convert_units_from = c('NH4_N' = 'umol/l',
                                                'NO3_N' = 'umol/l',
                                                'PO4_P' = 'umol/l',
@@ -932,8 +932,8 @@ process_1_108 <- function(network, domain, prodname_ms, site_code,
                    c = component)
 
     d <- ms_read_raw_csv(filepath = rawfile,
-                         datetime_cols = list('Date' = '%Y-%m-%d'),
-                         datetime_tz = 'US/Eastern',
+                         datetime_cols = c('Date' = '%Y-%m-%d'),
+                         datetime_tz = 'Etc/GMT+5',
                          site_code_col = 'Permanent_ID',
                          alt_site_code = list('cart_creek' = 'YSI-CC',
                                               'bear_meadow' = 'YSI-CS',
@@ -954,7 +954,7 @@ process_1_108 <- function(network, domain, prodname_ms, site_code,
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
 
-    d <- ms_conversions(d,
+    d <- ms_conversions_(d,
                         convert_units_from = c('NH4_N' = 'umol/l',
                                                'PO4_P' = 'umol/l',
                                                'NO3_NO2_N' = 'umol/l',
@@ -1009,8 +1009,8 @@ process_1_106 <- function(network, domain, prodname_ms, site_code,
         mutate(NO3_flag = ifelse(grepl('9', Notes), 1, 0))
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('Date.1' = '%Y-%m-%d'),
-                         datetime_tz = 'US/Eastern',
+                         datetime_cols = c('Date.1' = '%Y-%m-%d'),
+                         datetime_tz = 'Etc/GMT+5',
                          site_code_col = 'Site',
                          alt_site_code = list('cart_creek' = 'CC',
                                               'bear_meadow' = c('CS', 'CS '),
@@ -1032,7 +1032,7 @@ process_1_106 <- function(network, domain, prodname_ms, site_code,
                             variable_flags_to_drop = 'DROP',
                             variable_flags_dirty = '1')
 
-    d <- ms_conversions(d,
+    d <- ms_conversions_(d,
                    convert_units_from = c('TP' = 'umol/l',
                                           'TN' = 'umol/l',
                                           'NO3_NO2_N' = 'umol/l',
@@ -1129,7 +1129,7 @@ process_1_542 <- munge_precip_alt
 #. handle_errors
 process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, component) {
 
-    rawfile <- glue('data/{n}/{d}/raw/ws_boundary__VERSIONLESS001/sitecode_NA/cart_creek.zip',
+    rawfile <- glue('data/{n}/{d}/raw/ws_boundary__VERSIONLESS001/sitename_NA/cart_creek.zip',
                     n = network,
                     d = domain)
 
@@ -1140,7 +1140,8 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
     unzip(rawfile,
           exdir = mungedir)
 
-    sf::st_read(dsn = file.path(mungedir, 'cart_creek')) %>%
+    sf::st_read(dsn = file.path(mungedir, 'cart_creek'),
+                quiet = TRUE) %>%
         sf::st_transform(4326) %>%
         rename(site_code = site_name) %>%
         sf::st_write(dsn = file.path(mungedir, 'cart_creek'),
@@ -1162,7 +1163,7 @@ process_2_ms006 <- stream_gauge_from_site_data
 
 #discharge: STATUS=READY
 #. handle_errors
-process_2_ms001 <- function(network, domain, prodname_ms) {
+process_2_ms001 <- function(network, domain, prodname_ms){
 
     files <- ms_list_files(network = network,
                            domain = domain,
@@ -1181,19 +1182,17 @@ process_2_ms001 <- function(network, domain, prodname_ms) {
                                            'discharge__228', 'discharge__396',
                                            'discharge__397', 'discharge__398',
                                            'discharge__399', 'discharge__156',
-                                           'discharge__157', 'discharge__158',
-                                           'discharge__173', 'discharge__174',
-                                           'discharge__114'))
+                                           'discharge__157', 'discharge__173',
+                                           'discharge__174', 'discharge__114'))
 
     site_feather <- str_split_fixed(files, '/', n = Inf)[,6]
-    sites <- unique(str_split_fixed(site_feather, '[.]', n = Inf)[,1])
+    sites <- unique(str_split_fixed(site_feather, '[.]', n = Inf)[, 1])
 
     d <- tibble()
-    for(i in 1:length(sites)) {
-        site_files <- grep(sites[i], files, value = TRUE)
+    for(i in 1:length(sites)){
 
+        site_files <- grep(paste0('/', sites[i], '.feather'), files, value = TRUE)
         site_full <- map_dfr(site_files, read_feather)
-
         d <- rbind(d, site_full)
     }
 
@@ -1226,7 +1225,7 @@ process_2_ms001 <- function(network, domain, prodname_ms) {
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
-process_2_ms002 <- function(network, domain, prodname_ms) {
+process_2_ms002 <- function(network, domain, prodname_ms){
 
     files <- ms_list_files(network = network,
                            domain = domain,
@@ -1273,11 +1272,10 @@ process_2_ms002 <- function(network, domain, prodname_ms) {
     sites <- unique(str_split_fixed(site_feather, '[.]', n = Inf)[,1])
 
     d <- tibble()
-    for(i in 1:length(sites)) {
-        site_files <- grep(sites[i], files, value = TRUE)
+    for(i in 1:length(sites)){
 
+        site_files <- grep(paste0('/', sites[i], '.feather'), files, value = TRUE)
         site_full <- map_dfr(site_files, read_feather)
-
         d <- rbind(d, site_full)
     }
 
@@ -1326,17 +1324,18 @@ process_2_ms003 <- function(network, domain, prodname_ms){
     sites <- unique(str_split_fixed(site_feather, '[.]', n = Inf)[,1])
 
     d <- tibble()
-    for(i in 1:length(sites)) {
-        site_files <- grep(sites[i], files, value = TRUE)
+    for(i in 1:length(sites)){
 
+        site_files <- grep(paste0('/', sites[i], '.feather'), files, value = TRUE)
         site_full <- map_dfr(site_files, read_feather)
-
         d <- rbind(d, site_full)
     }
 
     d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
-    d <- synchronize_timestep(d)
+    d <- synchronize_timestep(d,
+                              admit_NAs = TRUE,
+                              allow_pre_interp = TRUE)
 
     dir <- glue('data/{n}/{d}/derived/{p}',
                 n = network,

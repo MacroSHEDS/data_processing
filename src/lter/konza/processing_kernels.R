@@ -161,10 +161,10 @@ process_1_7 <- function(network, domain, prodname_ms, site_code,
         mutate(month = ifelse(num_m == 1, paste0('0', as.character(RECMONTH)), as.character(RECMONTH)))
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('RECYEAR' = '%Y',
+                         datetime_cols = c('RECYEAR' = '%Y',
                                               'month' = '%m',
                                               'day' = '%d'),
-                         datetime_tz = 'US/Central',
+                         datetime_tz = 'Etc/GMT+5',
                          site_code_col = 'WATERSHED',
                          alt_site_code = list('N04D' = 'n04d'),
                          data_cols =  c('MEANDISCHARGE' = 'discharge'),
@@ -185,7 +185,7 @@ process_1_7 <- function(network, domain, prodname_ms, site_code,
 
     # Convert from cm/s to liters/s
     d <- d %>%
-      mutate(val = val*1000)
+        mutate(val = val*1000)
 
     return(d)
 }
@@ -211,10 +211,10 @@ process_1_8 <- function(network, domain, prodname_ms, site_code,
         mutate(month = ifelse(num_m == 1, paste0('0', as.character(RECMONTH)), as.character(RECMONTH)))
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('RECYEAR' = '%Y',
+                         datetime_cols = c('RECYEAR' = '%Y',
                                               'month' = '%m',
                                               'day' = '%d'),
-                         datetime_tz = 'US/Central',
+                         datetime_tz = 'Etc/GMT+5',
                          site_code_col = 'WATERSHED',
                          alt_site_code = list('N20B' = 'n20b'),
                          data_cols =  c('MEANDISCHARGE' = 'discharge'),
@@ -261,10 +261,10 @@ process_1_9 <- function(network, domain, prodname_ms, site_code,
         mutate(month = ifelse(num_m == 1, paste0('0', as.character(RECMONTH)), as.character(RECMONTH)))
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('RECYEAR' = '%Y',
+                         datetime_cols = c('RECYEAR' = '%Y',
                                               'month' = '%m',
                                               'day' = '%d'),
-                         datetime_tz = 'US/Central',
+                         datetime_tz = 'Etc/GMT+5',
                          site_code_col = 'WATERSHED',
                          alt_site_code = list('N01B' = 'n01b'),
                          data_cols =  c('MEANDISCHARGE' = 'discharge'),
@@ -305,16 +305,16 @@ process_1_10 <- function(network, domain, prodname_ms, site_code,
     d <- read.csv(rawfile1, colClasses = "character")
 
     d <- d %>%
-      mutate(num_d = nchar(RECDAY)) %>%
-      mutate(num_m = nchar(RECMONTH)) %>%
-      mutate(day = ifelse(num_d == 1, paste0('0', as.character(RECDAY)), as.character(RECDAY))) %>%
-      mutate(month = ifelse(num_m == 1, paste0('0', as.character(RECMONTH)), as.character(RECMONTH)))
+        mutate(num_d = nchar(RECDAY)) %>%
+        mutate(num_m = nchar(RECMONTH)) %>%
+        mutate(day = ifelse(num_d == 1, paste0('0', as.character(RECDAY)), as.character(RECDAY))) %>%
+        mutate(month = ifelse(num_m == 1, paste0('0', as.character(RECMONTH)), as.character(RECMONTH)))
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('RECYEAR' = '%Y',
+                         datetime_cols = c('RECYEAR' = '%Y',
                                               'month' = '%m',
                                               'day' = '%d'),
-                         datetime_tz = 'US/Central',
+                         datetime_tz = 'Etc/GMT+5',
                          site_code_col = 'WATERSHED',
                          alt_site_code = list('N02B' = 'n02b'),
                          data_cols =  c('MEANDISCHARGE' = 'discharge'),
@@ -335,7 +335,7 @@ process_1_10 <- function(network, domain, prodname_ms, site_code,
 
     # Convert from cm/s to liters/s
     d <- d %>%
-      mutate(val = val*1000)
+        mutate(val = val*1000)
 
     return(d)
 }
@@ -345,12 +345,12 @@ process_1_10 <- function(network, domain, prodname_ms, site_code,
 process_1_50 <- function(network, domain, prodname_ms, site_code,
                          component){
 
-    rawfile1 = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
-                    n = network,
-                    d = domain,
-                    p = prodname_ms,
-                    s = site_code,
-                    c = component)
+    rawfile1 <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
+                     n = network,
+                     d = domain,
+                     p = prodname_ms,
+                     s = site_code,
+                     c = component)
 
     d <- read.csv(rawfile1,
                   colClasses = 'character',
@@ -370,14 +370,14 @@ process_1_50 <- function(network, domain, prodname_ms, site_code,
         select(-num_t, -RecTime, -num_d, -RecDay)
 
     NO3_codes <- c('No3 Below det limit', 'NO3 < det limit', 'NO3<det limit', 'no3 < det limit',
-        'no3 below det limit', 'no3 and tp < det limit',
-        'no3 not detectable', 'no3 below det limit', 'bison upstream; no3 < det limit 90.5 0',
-        'no3 < det limit(0.4)', 'no3 < det limit(0.0);  tp < srp', 'no3 < det limit(0.4);  tnp=3x',
-        'no3 below det', 'no3 < det limit; doc is OK-ran@1:1;  broke ice at 9am..',
-        'no3 < det limit; broke ice at 9am; sample at 1128', 'no3 < det limit; only ditch from K1a flowing',
-        'no3 < det limit; took from large pool below tube', 'no3 below det;  murky water',
-        'no3 < det limit; tnp=c', 'no3<detection limit', 'NO3 < det limit',
-        'new equipment installed; NO3 < det limit', 'NO3<det limit', 'lots of leaf litter and NO3 < det limit')
+                   'no3 below det limit', 'no3 and tp < det limit',
+                   'no3 not detectable', 'no3 below det limit', 'bison upstream; no3 < det limit 90.5 0',
+                   'no3 < det limit(0.4)', 'no3 < det limit(0.0);  tp < srp', 'no3 < det limit(0.4);  tnp=3x',
+                   'no3 below det', 'no3 < det limit; doc is OK-ran@1:1;  broke ice at 9am..',
+                   'no3 < det limit; broke ice at 9am; sample at 1128', 'no3 < det limit; only ditch from K1a flowing',
+                   'no3 < det limit; took from large pool below tube', 'no3 below det;  murky water',
+                   'no3 < det limit; tnp=c', 'no3<detection limit', 'NO3 < det limit',
+                   'new equipment installed; NO3 < det limit', 'NO3<det limit', 'lots of leaf litter and NO3 < det limit')
 
     NH4_codes <- c('NH4 <det limit', 'nh4<det limit', 'no height; frozen over;nh4<det limit')
 
@@ -418,7 +418,7 @@ process_1_50 <- function(network, domain, prodname_ms, site_code,
                SRP = ifelse(COMMENTS %in% !!SRP_codes & SRP == '.', 'BDL', SRP),
                TN = ifelse(COMMENTS %in% !!TN_codes & TN == '.', 'BDL', TN),
                DOC = ifelse(COMMENTS %in% !!DOC_codes & DOC == '.', 'BDL', DOC)
-               ) %>%
+        ) %>%
         mutate(TP_code = ifelse(COMMENTS %in% !!TP_codes & TP != 'BDL', 'BDL', NA),
                NO3_code = ifelse(COMMENTS %in% !!NO3_codes & NO3 != 'BDL', 'BDL', NA),
                NH4_code = ifelse(COMMENTS %in% !!NH4_codes & NH4 != 'BDL', 'BDL', NA),
@@ -432,11 +432,11 @@ process_1_50 <- function(network, domain, prodname_ms, site_code,
         mutate(comments = ifelse(COMMENTS %in% !!COMMENTS_flags, 1, 0))
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('RecYear' = '%Y',
+                         datetime_cols = c('RecYear' = '%Y',
                                               'RecMonth' = '%m',
                                               'day' = '%d',
                                               'time' = '%H%M'),
-                         datetime_tz = 'US/Central',
+                         datetime_tz = 'Etc/GMT+5',
                          site_code_col = 'WATERSHED',
                          alt_site_code = list('N04D' = 'n04d',
                                               'N02B' = 'n02b',
@@ -449,7 +449,7 @@ process_1_50 <- function(network, domain, prodname_ms, site_code,
                                               'KZFL' = 'kzfl',
                                               'SHAN' = 'shan',
                                               'HIKX' = 'hikx'),
-                         data_cols =  c('NO3', 'NH4'='NH4_N', 'TN', 'SRP',
+                         data_cols =  c('NO3', 'NH4'='NH4_N', 'TN', 'SRP'='orthophosphate_P',
                                         'TP', 'DOC'),
                          data_col_pattern = '#V#',
                          var_flagcol_pattern = '#V#_code',
@@ -466,14 +466,14 @@ process_1_50 <- function(network, domain, prodname_ms, site_code,
                             summary_flags_dirty = list('comments' = c(1)))
 
     # Discrepancy in konza meta data that list DOC as both mg/l and ug/l
-    d <- ms_conversions(d,
+    d <- ms_conversions_(d,
                         # convert_molecules = c('NO3', 'SO4', 'PO4', 'SiO2',
                         #                       'NH4', 'NH3'),
                         convert_units_from = c(NO3 = 'ug/l', NH4_N = 'ug/l',
-                                               TN = 'ug/l', SRP = 'ug/l',
+                                               TN = 'ug/l', orthophosphate_P = 'ug/l',
                                                TP = 'ug/l'),
                         convert_units_to = c(NO3 = 'mg/l', NH4_N = 'mg/l',
-                                             TN = 'mg/l', SRP = 'mg/l',
+                                             TN = 'mg/l', orthophosphate_P = 'mg/l',
                                              TP = 'mg/l'))
 
     return(d)
@@ -492,11 +492,11 @@ process_1_51 <- function(network, domain, prodname_ms, site_code,
                     c = component)
 
     d <- ms_read_raw_csv(filepath = rawfile1,
-                         datetime_cols = list('RecYear' = '%Y',
+                         datetime_cols = c('RecYear' = '%Y',
                                               'RecMonth' = '%m',
                                               'RecDay' = '%d',
                                               'RecTime' = '%H%M'),
-                         datetime_tz = 'US/Central',
+                         datetime_tz = 'Etc/GMT+5',
                          site_code_col = 'Site',
                          alt_site_code = list('N04D' = 'n04d',
                                               'N02B' = 'n02b',
@@ -516,8 +516,7 @@ process_1_51 <- function(network, domain, prodname_ms, site_code,
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
-process_1_20 <- function(network, domain, prodname_ms, site_code,
-                         component) {
+process_1_20 <- function(network, domain, prodname_ms, site_code, component){
 
     rawfile1 = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                     n = network,
@@ -529,23 +528,26 @@ process_1_20 <- function(network, domain, prodname_ms, site_code,
     d <- read.csv(rawfile1, colClasses = "character")
 
     d <- d %>%
-      mutate(Rectime = ifelse(Rectime == '.', 1200, Rectime)) %>%
-      mutate(num_t = nchar(Rectime)) %>%
-      mutate(num_d = nchar(RecDay)) %>%
-      mutate(time = case_when(num_t == 1 ~ paste0('010', Rectime),
-                              num_t == 2 ~ paste0('01', Rectime),
-                              num_t == 3 ~ paste0('0', Rectime),
-                              num_t == 4 ~ as.character(Rectime),
-                              is.na(num_t) ~ '1200')) %>%
-      mutate(day = ifelse(num_d == 1, paste0('0', as.character(RecDay)), as.character(RecDay))) %>%
-      select(-num_t, -Rectime, -num_d, -RecDay)
+        mutate(Rectime = ifelse(Rectime == '.', 1200, Rectime)) %>%
+        mutate(num_t = nchar(Rectime)) %>%
+        mutate(num_d = nchar(RecDay)) %>%
+        mutate(time = case_when(num_t == 1 ~ paste0('010', Rectime),
+                                num_t == 2 ~ paste0('01', Rectime),
+                                num_t == 3 ~ paste0('0', Rectime),
+                                num_t == 4 ~ as.character(Rectime),
+                                is.na(num_t) ~ '1200')) %>%
+        mutate(day = ifelse(num_d == 1, paste0('0', as.character(RecDay)), as.character(RecDay))) %>%
+        select(-num_t, -Rectime, -num_d, -RecDay) %>%
+        mutate(Watershed = if_else(Watershed == 'shane',
+                                   'SHAN',
+                                   toupper(Watershed)))
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('RecYear' = '%Y',
+                         datetime_cols = c('RecYear' = '%Y',
                                               'RecMonth' = '%m',
                                               'day' = '%d',
                                               'time' = '%H%M'),
-                         datetime_tz = 'US/Central',
+                         datetime_tz = 'Etc/GMT+5',
                          site_code_col = 'Watershed',
                          data_cols =  c('TSS', 'VSS'),
                          data_col_pattern = '#V#',
@@ -555,8 +557,8 @@ process_1_20 <- function(network, domain, prodname_ms, site_code,
 
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA,
-                            summary_flags_to_drop = list(comments = 'ensuring all get ms_status=0'),
-                            summary_flags_dirty = list(comments = 'ensuring all get ms_status = 0'))
+                            summary_flags_to_drop = list(comments = 'sentinel'),
+                            summary_flags_dirty = list(comments = 'sentinel2'))
 
     return(d)
 }
@@ -577,13 +579,13 @@ process_1_21 <- function(network, domain, prodname_ms, site_code,
     d <- read.csv(rawfile1, colClasses = "character")
 
     d <- d %>%
-      mutate(site = case_when(component == 'ASW011' ~ 'N02B',
-                              component == 'ASW012' ~ 'N04D'))
+        mutate(site = case_when(component == 'ASW011' ~ 'N02B',
+                                component == 'ASW012' ~ 'N04D'))
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('Date' = '%m/%d/%Y',
+                         datetime_cols = c('Date' = '%m/%d/%Y',
                                               'Time' = '%H:%M:%S'),
-                         datetime_tz = 'US/Central',
+                         datetime_tz = 'Etc/GMT+5',
                          site_code_col = 'site',
                          data_cols =  c('SpCond' = 'spCond',
                                         'Temp' = 'temp',
@@ -602,7 +604,7 @@ process_1_21 <- function(network, domain, prodname_ms, site_code,
 
     # Convert from cm/s to liters/s
     d <- d %>%
-      mutate(val = ifelse(var == 'IS_spCond', val*1000, val))
+        mutate(val = ifelse(var == 'IS_spCond', val*1000, val))
 
     return(d)
 }
@@ -613,35 +615,35 @@ process_1_16 <- function(network, domain, prodname_ms, site_code,
                          component){
 
 
-  rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
-                  n = network,
-                  d = domain,
-                  p = prodname_ms,
-                  s = site_code,
-                  c = component)
+    rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
+                   n = network,
+                   d = domain,
+                   p = prodname_ms,
+                   s = site_code,
+                   c = component)
 
-  d <- read.csv(rawfile, colClasses = "character") %>%
-    mutate(RecDay = ifelse(nchar(RecDay) == 1, paste0(0, RecDay), RecDay))
+    d <- read.csv(rawfile, colClasses = "character") %>%
+        mutate(RecDay = ifelse(nchar(RecDay) == 1, paste0(0, RecDay), RecDay))
 
-  d <- ms_read_raw_csv(preprocessed_tibble = d,
-                       datetime_cols = list('RecYear' = '%Y',
-                                            'RecMonth' = '%m',
-                                            'RecDay' = '%d'),
-                       datetime_tz = 'US/Central',
-                       site_code_col = 'Watershed',
-                       alt_site_code = list('N04D' = 'n04d',
-                                            'N02B' = 'n02b',
-                                            'N01B' = 'n01b',
-                                            'N20B' = 'n20b'),
-                       data_cols =  c('Tmean' = 'temp'),
-                       data_col_pattern = '#V#',
-                       sampling_type = 'I',
-                       is_sensor = TRUE)
+    d <- ms_read_raw_csv(preprocessed_tibble = d,
+                         datetime_cols = c('RecYear' = '%Y',
+                                              'RecMonth' = '%m',
+                                              'RecDay' = '%d'),
+                         datetime_tz = 'Etc/GMT+5',
+                         site_code_col = 'Watershed',
+                         alt_site_code = list('N04D' = 'n04d',
+                                              'N02B' = 'n02b',
+                                              'N01B' = 'n01b',
+                                              'N20B' = 'n20b'),
+                         data_cols =  c('Tmean' = 'temp'),
+                         data_col_pattern = '#V#',
+                         sampling_type = 'I',
+                         is_sensor = TRUE)
 
-  d <- ms_cast_and_reflag(d,
-                          varflag_col_pattern = NA)
+    d <- ms_cast_and_reflag(d,
+                            varflag_col_pattern = NA)
 
-  return(d)
+    return(d)
 }
 
 #precip_chemistry: STATUS=READY
@@ -659,16 +661,16 @@ process_1_43 <- function(network, domain, prodname_ms, site_code,
     d <- read.csv(rawfile1, colClasses = "character")
 
     d <- d %>%
-      mutate(num_d = nchar(RecDay)) %>%
-      mutate(day = ifelse(num_d == 1, paste0('0', as.character(RecDay)), as.character(RecDay))) %>%
-      select(-num_d, -RecDay)  %>%
-      filter(! Watershed %in% c('001d', 'n01d', ''))
+        mutate(num_d = nchar(RecDay)) %>%
+        mutate(day = ifelse(num_d == 1, paste0('0', as.character(RecDay)), as.character(RecDay))) %>%
+        select(-num_d, -RecDay)  %>%
+        filter(! Watershed %in% c('001d', 'n01d', ''))
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('RecYear' = '%Y',
+                         datetime_cols = c('RecYear' = '%Y',
                                               'RecMonth' = '%m',
                                               'day' = '%d'),
-                         datetime_tz = 'US/Central',
+                         datetime_tz = 'Etc/GMT+5',
                          site_code_col = 'Watershed',
                          alt_site_code = list('002C' = c('R20B', '001c', 'r20b', '001c'),
                                               '020B' = '020b',
@@ -676,11 +678,12 @@ process_1_43 <- function(network, domain, prodname_ms, site_code,
                                               'N4DF' = c('N04D', 'n04d'),
                                               'N01B' = 'n01b'),
                          data_cols =  c('NO3'='NO3_N', 'NH4'='NH4_N', 'TPsN'='TPN',
-                                        'SRP', 'TPP'),
+                                        'SRP'='orthophosphate_P', 'TPP'),
                          data_col_pattern = '#V#',
                          set_to_NA = c('', '.', ' '),
                          summary_flagcols = 'Comments',
-                         is_sensor = FALSE)
+                         is_sensor = FALSE,
+                         keep_empty_rows = TRUE)
 
     clean_comments <- is.na(d$Comments) |
         grepl('^(?:rain|snow|cloudy ?=? ?)?[0-9; \\)\\(\\/\\.=\\-]*$', d$Comments)
@@ -691,18 +694,19 @@ process_1_43 <- function(network, domain, prodname_ms, site_code,
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA,
                             summary_flags_dirty = list(Comments = 'dirty'),
-                            summary_flags_clean = list(Comments = 'clean'))
+                            summary_flags_clean = list(Comments = 'clean'),
+                            keep_empty_rows = TRUE)
 
-    d <- ms_conversions(d,
+    d <- ms_conversions_(d,
                         convert_units_from = c(NO3_N = 'ug/l',
                                                NH4_N = 'ug/l',
                                                TPsN = 'ug/l',
-                                               SRP = 'ug/l',
+                                               orthophosphate_P = 'ug/l',
                                                TPP = 'ug/l'),
                         convert_units_to = c(NO3_N = 'mg/l',
                                              NH4_N = 'mg/l',
                                              TPsN = 'mg/l',
-                                             SRP = 'mg/l',
+                                             orthophosphate_P = 'mg/l',
                                              TPP = 'mg/l'))
 
     return(d)
@@ -710,32 +714,42 @@ process_1_43 <- function(network, domain, prodname_ms, site_code,
 
 #precipitation: STATUS=READY
 #. handle_errors
-process_1_4 <- function(network, domain, prodname_ms, site_code,
-                         component) {
+process_1_4 <- function(network, domain, prodname_ms, site_code, component){
 
-    rawfile1 = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
-                    n = network,
-                    d = domain,
-                    p = prodname_ms,
-                    s = site_code,
-                    c = component)
+    rawfile1 <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
+                     n = network,
+                     d = domain,
+                     p = prodname_ms,
+                     s = site_code,
+                     c = component)
 
     d <- ms_read_raw_csv(filepath = rawfile1,
-                         datetime_cols = list('RecDate' = '%m/%e/%Y'),
-                         datetime_tz = 'US/Central',
+                         datetime_cols = c('RecDate' = '%m/%e/%Y'),
+                         datetime_tz = 'Etc/GMT+5',
                          site_code_col = 'watershed',
-                         alt_site_code = list('HQ' = 'HQ02'),
+                         alt_site_code = list(#'HQ' = 'HQ02',
+                             'N01B' = 'n01b',
+                             'R01A' = 'r01a',
+                             'N4DF' = 'n4df',
+                             'K01B' = 'k01b',
+                             '020B' = '020b'),
                          data_cols =  c('ppt' = 'precipitation'),
                          data_col_pattern = '#V#',
                          summary_flagcols = 'Comments',
                          set_to_NA = c('.'),
-                         # sampling_type = 'I',
-                         is_sensor = TRUE)
+                         sampling_type = 'I',
+                         is_sensor = FALSE,
+                         keep_empty_rows = TRUE)
 
-    d <- ms_cast_and_reflag(d,
+    d <- ms_cast_and_reflag(
+        d,
         varflag_col_pattern = NA,
         summary_flags_clean = list(Comments = c('', ' ', '8.0mm due')),
-        summary_flags_to_drop = list(Comments = 'just making sure every other flag ends up as ms_status 1'))
+        summary_flags_to_drop = list(Comments = 'sentinel'),
+        keep_empty_rows = TRUE
+    )
+
+    d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
     return(d)
 }
@@ -743,14 +757,14 @@ process_1_4 <- function(network, domain, prodname_ms, site_code,
 #precip_gauge_locations; stream_gauge_locations: STATUS=READY
 #. handle_errors
 process_1_230 <- function(network, domain, prodname_ms, site_code,
-                        component) {
+                          component) {
 
     rawzip <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.zip',
-                    n = network,
-                    d = domain,
-                    p = prodname_ms,
-                    s = site_code,
-                    c = component)
+                   n = network,
+                   d = domain,
+                   p = prodname_ms,
+                   s = site_code,
+                   c = component)
 
     rawpath <- glue('data/{n}/{d}/raw/{p}/{s}',
                     n = network,
@@ -765,30 +779,33 @@ process_1_230 <- function(network, domain, prodname_ms, site_code,
 
     projstring <- choose_projection(unprojected = TRUE)
 
-    if(prodname_ms == 'precip_gauge_locations__230') {
-    gauges <- sf::st_read(paste0(rawpath, '/', component)) %>%
-      mutate(site_code = case_when(RAINGAUGE == 'PPTSE' ~'002C',
-                                   RAINGAUGE == 'PPT4B' ~ '004B',
-                                   RAINGAUGE == 'PPTUB' ~ '020B',
-                                   RAINGAUGE == 'PPTK4' ~ 'K01B',
-                                   RAINGAUGE == 'PPTN1B' ~ 'N01B',
-                                   RAINGAUGE == 'PPTN2B' ~ 'N02B',
-                                   RAINGAUGE == 'PPTN4FL' ~ 'N4DF',
-                                   RAINGAUGE == 'PPTN4PC' ~ 'N4DU',
-                                   RAINGAUGE == 'PPTUA' ~ 'R01A',
-                                   RAINGAUGE == 'PPTHQ2' ~ 'HQ02')) %>%
-      filter(! is.na(site_code)) %>%
-      select(site_code, geometry) %>%
-      sf::st_transform(projstring) %>%
-      arrange(site_code)
+    if(prodname_ms == 'precip_gauge_locations__230'){
+
+        gauges <- sf::st_read(paste0(rawpath, '/', component),
+                              quiet = TRUE) %>%
+            mutate(site_code = case_when(RAINGAUGE == 'PPTSE' ~'002C',
+                                         RAINGAUGE == 'PPT4B' ~ '004B',
+                                         RAINGAUGE == 'PPTUB' ~ '020B',
+                                         RAINGAUGE == 'PPTK4' ~ 'K01B',
+                                         RAINGAUGE == 'PPTN1B' ~ 'N01B',
+                                         RAINGAUGE == 'PPTN2B' ~ 'N02B',
+                                         RAINGAUGE == 'PPTN4FL' ~ 'N4DF',
+                                         RAINGAUGE == 'PPTN4PC' ~ 'N4DU',
+                                         RAINGAUGE == 'PPTUA' ~ 'R01A',
+                                         RAINGAUGE == 'PPTHQ2' ~ 'HQ02')) %>%
+            filter(! is.na(site_code)) %>%
+            select(site_code, geometry) %>%
+            sf::st_transform(projstring) %>%
+            arrange(site_code)
     } else {
-      gauges <- sf::st_read(paste0(rawpath, '/', component)) %>%
-        filter(! is.na(DATES_SAMP),
-               STATION != 'ESH',
-               STATION != 'ESF') %>%
-        select(site_code = STATION, geometry) %>%
-        sf::st_transform(projstring) %>%
-        arrange(site_code)
+        gauges <- sf::st_read(paste0(rawpath, '/', component),
+                              quiet = TRUE) %>%
+            filter(! is.na(DATES_SAMP),
+                   STATION != 'ESH',
+                   STATION != 'ESF') %>%
+            select(site_code = STATION, geometry) %>%
+            sf::st_transform(projstring) %>%
+            arrange(site_code)
     }
 
     unlink(zipped_files)

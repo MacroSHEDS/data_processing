@@ -9,7 +9,6 @@ if(! is.null(prodname_filter)){
     prod_info <- filter(prod_info, prodname %in% prodname_filter)
 }
 
-# i=11
 for(i in seq_len(nrow(prod_info))){
 
     prodname_ms <<- paste0(prod_info$prodname[i], '__', prod_info$prodcode[i])
@@ -46,6 +45,21 @@ for(i in seq_len(nrow(prod_info))){
                                        site_code = site_code,
                                        prodname_ms = prodname_ms,
                                        tracker = held_data)
+        } else if(grepl('precip', prodname_ms)){
+
+            mthd <- ifelse(grepl('precipitation', prodname_ms), 'mean_nocb', 'nocb')
+
+            munge_rtn <- munge_combined(network = network,
+                                        domain = domain,
+                                        site_code = site_code,
+                                        prodname_ms = prodname_ms,
+                                        tracker = held_data,
+                                        interp_control = list(
+                                            admit_NAs = TRUE,
+                                            paired_p_and_pchem = FALSE,
+                                            allow_pre_interp = TRUE,
+                                            precip_interp_method = mthd
+                                        ))
         } else {
 
             munge_rtn <- munge_combined(network = network,

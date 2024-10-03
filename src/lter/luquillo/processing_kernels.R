@@ -76,15 +76,12 @@ process_0_182 <- function(set_details, network, domain){
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
-process_1_20 <- function(network, domain, prodname_ms, site_code,
-                         component){
+process_1_20 <- function(network, domain, prodname_ms, site_code, component){
 
     if(component %in% c('All Sites Basic Field Stream Chemistry Data',
                         'LUQ LTER method detection limits')){
         return(tibble())
     }
-    
-    # look <- read_csv('data/lter/luquillo/raw/stream_chemistry__20/sitename_NA/All Sites Basic Field Stream Chemistry Data.csv')
 
     rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                     n = network,
@@ -92,55 +89,49 @@ process_1_20 <- function(network, domain, prodname_ms, site_code,
                     p = prodname_ms,
                     s = site_code,
                     c = component)
-    
-    d <- read.csv(rawfile,
-                  colClasses = 'character') %>%
-        mutate(Sample_Time = ifelse(nchar(Sample_Time) == 3, paste0(0, Sample_Time), Sample_Time)) %>%
-        rename(NO3.NCode = NitrateCode,
-               SO4.SCode = SulfateCode,
-               ClCode = ChlorideCode,
-               NaCode = SodiumCode,
-               KCode = PotassiumCode,
-               MgCode = MagnesiumCode,
-               CaCode = CalciumCode,
-               NH4.NCode = NH4Code,
-               PO4.PCode = PO4Code)
-    
+
+    d <- read.csv(rawfile, colClasses = 'character') %>%
+        rename_with(tolower) %>%
+        mutate(sample_time = str_pad(sample_time,
+                                     width = 4,
+                                     pad = '0')) %>%
+        rename_with(~case_when(!!!cases), .cols = everything())
+
+    #these codes legit missing: tempcode, phcode, condcode, tsscode, tdpcode, turbiditycode
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('Sample_Date' = '%Y-%m-%d',
-                                              'Sample_Time' = '%H%M'
-                                              ),
-                         datetime_tz = 'Etc/GMT-4',
-                         site_code_col = 'Sample_ID',
+                         datetime_cols = c('sample_date' = '%Y-%m-%d',
+                                              'sample_time' = '%H%M'),
+                         datetime_tz = 'Etc/GMT+4',
+                         site_code_col = 'sample_id',
                          alt_site_code = list('QT' = c('QT', 'QT1')),
-                         data_cols =  c('Temp' = 'temp',
-                                        'pH'='pH',
-                                        'Cond' = 'spCond',
-                                        'Cl',
-                                        'NO3.N' = 'NO3_N',
-                                        'SO4.S' = 'SO4_S',
-                                        'Na',
-                                        'K',
-                                        'Mg',
-                                        'Ca',
-                                        'NH4.N' = 'NH4_N',
-                                        'PO4.P' = 'PO4_P',
-                                        'DOC',
-                                        'DIC',
-                                        'TDN',
-                                        'SiO2',
-                                        'DON',
-                                        'TSS',
-                                        'TDP'),
+                         data_cols =  c('temp' = 'temp',
+                                        'ph'='pH',
+                                        'cond' = 'spCond',
+                                        'cl' = 'Cl',
+                                        'no3.n' = 'NO3_N',
+                                        'so4.s' = 'SO4_S',
+                                        'na' = 'Na',
+                                        'k' = 'K',
+                                        'mg' = 'Mg',
+                                        'ca' = 'Ca',
+                                        'nh4.n' = 'NH4_N',
+                                        'po4.p' = 'PO4_P',
+                                        'doc' = 'DOC',
+                                        'dic' = 'DIC',
+                                        'tdn' = 'TDN',
+                                        'sio2' = 'SiO2',
+                                        'don' = 'DON',
+                                        'tss' = 'TSS',
+                                        'tdp' = 'TDP',
+                                        'turbidity' = 'turbid_FNU'),
                          data_col_pattern = '#V#',
-                         var_flagcol_pattern = '#V#Code',
+                         var_flagcol_pattern = '#V#code',
                          set_to_NA = '-9999',
                          is_sensor = FALSE)
 
-    d <- ms_cast_and_reflag(d,
-                            variable_flags_bdl = 'BDL')
+    d <- ms_cast_and_reflag(d, variable_flags_bdl = 'BDL')
 
-    d <- ms_conversions(d,
+    d <- ms_conversions_(d,
                         convert_units_from = c(NO3_N = 'ug/l',
                                                NH4_N = 'ug/l',
                                                PO4_P = 'ug/l',
@@ -148,18 +139,15 @@ process_1_20 <- function(network, domain, prodname_ms, site_code,
                         convert_units_to = c(NO3_N = 'mg/l',
                                              NH4_N = 'mg/l',
                                              PO4_P = 'mg/l',
-                                             TDP = 'ug/l'))
+                                             TDP = 'mg/l'))
 
     return(d)
 }
 
 #precip_chemistry: STATUS=READY
 #. handle_errors
-process_1_174 <- function(network, domain, prodname_ms, site_code,
-                          component){
+process_1_174 <- function(network, domain, prodname_ms, site_code, component){
 
-  # Luquillo's metadata says NO3_N units are in mg/l but they are very high so
-  # I am assuming they must be in ug/l, will check with Luquillo.
     rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                     n = network,
                     d = domain,
@@ -167,59 +155,57 @@ process_1_174 <- function(network, domain, prodname_ms, site_code,
                     s = site_code,
                     c = component)
 
-    d <- read.csv(rawfile,
-                  colClasses = 'character') %>%
-      mutate(Sample_Time = ifelse(nchar(Sample_Time) == 3, paste0(0, Sample_Time), Sample_Time)) %>%
-        rename(NO3.NCode = NitrateCode,
-               SO4.SCode = SulfateCode,
-               ClCode = ChlorideCode,
-               NaCode = SodiumCode,
-               KCode = PotassiumCode,
-               MgCode = MagnesiumCode,
-               CaCode = CalciumCode,
-               NH4.NCode = NH4Code,
-               PO4.PCode = PO4Code)
+    d <- read.csv(rawfile, colClasses = 'character') %>%
+        rename_with(tolower) %>%
+        mutate(sample_time = str_pad(sample_time, width = 4, side = 'left')) %>%
+        rename_with(~case_when(!!!cases), .cols = everything())
 
-
+    #these codes legit missing: tempcode, phcode, condcode, tsscode, tdpcode, turbiditycode
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('Sample_Date' = '%Y-%m-%d',
-                                              'Sample_Time' = '%H%M'),
-                         datetime_tz = 'Etc/GMT-4',
-                         site_code_col = 'Sample_ID',
+                         datetime_cols = c('sample_date' = '%Y-%m-%d',
+                                              'sample_time' = '%H%M'),
+                         datetime_tz = 'Etc/GMT+4',
+                         site_code_col = 'sample_id',
                          alt_site_code = list('Bisley_Tower' = 'RCB',
                                               'El_Verde' = 'RCEV'),
-                         data_cols =  c('pH'='pH',
-                                        'Cond' = 'spCond',
-                                        'Cl',
-                                        'NO3.N' = 'NO3_N',
-                                        'SO4.S' = 'SO4_S',
-                                        'Na',
-                                        'K',
-                                        'Mg',
-                                        'Ca',
-                                        'NH4.N' = 'NH4_N',
-                                        'PO4.P' = 'PO4_P',
-                                        'DOC',
-                                        'DIC',
-                                        'TDN',
-                                        'TDP',
-                                        'SiO2'),
+                         data_cols =  c('temp' = 'temp',
+                                        'ph'='pH',
+                                        'cond' = 'spCond',
+                                        'cl' = 'Cl',
+                                        'no3.n' = 'NO3_N',
+                                        'so4.s' = 'SO4_S',
+                                        'na' = 'Na',
+                                        'k' = 'K',
+                                        'mg' = 'Mg',
+                                        'ca' = 'Ca',
+                                        'nh4.n' = 'NH4_N',
+                                        'po4.p' = 'PO4_P',
+                                        'doc' = 'DOC',
+                                        'dic' = 'DIC',
+                                        'tdn' = 'TDN',
+                                        'sio2' = 'SiO2',
+                                        'don' = 'DON',
+                                        'tss' = 'TSS',
+                                        'tdp' = 'TDP',
+                                        'turbidity' = 'turbid_FNU'),
                          data_col_pattern = '#V#',
+                         var_flagcol_pattern = '#V#code',
                          set_to_NA = '-9999',
-                         var_flagcol_pattern = '#V#Code',
-                         is_sensor = FALSE)
+                         is_sensor = FALSE,
+                         keep_empty_rows = TRUE)
 
     d <- ms_cast_and_reflag(d,
-                            variable_flags_bdl = 'BDL')
+                            variable_flags_bdl = 'BDL',
+                            keep_empty_rows = TRUE)
 
-    d <- ms_conversions(d,
-                        convert_units_from = c(NH4_N = 'ug/l',
+    d <- ms_conversions_(d,
+                        convert_units_from = c(NO3_N = 'ug/l',
+                                               NH4_N = 'ug/l',
                                                PO4_P = 'ug/l',
-                                               NO3_N = 'ug/l',
                                                TDP = 'ug/l'),
-                        convert_units_to = c(NH4_N = 'mg/l',
+                        convert_units_to = c(NO3_N = 'mg/l',
+                                             NH4_N = 'mg/l',
                                              PO4_P = 'mg/l',
-                                             NO3_N = 'mg/l',
                                              TDP = 'mg/l'))
 
     return(d)
@@ -227,8 +213,7 @@ process_1_174 <- function(network, domain, prodname_ms, site_code,
 
 #precipitation: STATUS=READY
 #. handle_errors
-process_1_90 <- function(network, domain, prodname_ms, site_code,
-                         component){
+process_1_90 <- function(network, domain, prodname_ms, site_code, component){
 
     rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                    n = network,
@@ -237,100 +222,89 @@ process_1_90 <- function(network, domain, prodname_ms, site_code,
                    s = site_code,
                    c = component)
 
-    d <- read.csv(rawfile,
-                  colClasses = 'character') %>%
-      mutate(site = 'Bisley_Tower') %>%
-      mutate(month = str_split_fixed(DATE, '/', n = Inf)[,1],
-             day = str_split_fixed(DATE, '/', n = Inf)[,2],
-             year = str_split_fixed(DATE, '/', n = Inf)[,3]) %>%
-      mutate(day = ifelse(nchar(day) == 1, paste0(0, day), day)) %>%
-      mutate(year = ifelse(nchar(year) >= 5, str_split_fixed(year, ' ', n = Inf)[,1], year))
-
+    d <- read.csv(rawfile, colClasses = 'character') %>%
+        mutate(site = 'Bisley_Tower')
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('day' = '%d',
-                                              'month' = '%m',
-                                              'year' = '%Y'),
-                         datetime_tz = 'Etc/GMT-4',
+                         datetime_cols = c(DATE = '%Y-%m-%d'),
+                         datetime_tz = 'Etc/GMT+4',
                          site_code_col = 'site',
-                         data_cols =  c('Precipitationmm'='precipitation'),
+                         data_cols =  c(Precipitationmm = 'precipitation'),
                          data_col_pattern = '#V#',
-                         set_to_NA = '-9999',
-                         is_sensor = TRUE)
+                         set_to_NA = c('-9999', '.', ''),
+                         is_sensor = TRUE,
+                         keep_empty_rows = TRUE)
 
     d <- ms_cast_and_reflag(d,
-                            varflag_col_pattern = NA)
+                            varflag_col_pattern = NA,
+                            keep_empty_rows = TRUE)
 
     return(d)
 }
 
 #precipitation: STATUS=READY
 #. handle_errors
-process_1_14 <- function(network, domain, prodname_ms, site_code,
-                         component){
+process_1_14 <- function(network, domain, prodname_ms, site_code, component){
 
-    rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
-                   n = network,
-                   d = domain,
-                   p = prodname_ms,
-                   s = site_code,
-                   c = component)
+    rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
+                    n = network,
+                    d = domain,
+                    p = prodname_ms,
+                    s = site_code,
+                    c = component)
 
-    if(!component == 'El Verde Field Station Rainfall in Millimeters (1975-1989)'){
-        p_name <- 'RAINFALL..MM.'
-    } else{
-        p_name <- 'Rainfall.mm.'
-    }
-    
-      d <- read.csv(rawfile,
-                    colClasses = 'character')
+    d <- read.csv(rawfile, colClasses = 'character') %>%
+        mutate(site = 'El_Verde') %>%
+        rename_with(tolower) %>%
+        rename_with(~sub('rainfall\\.+mm\\.?', 'rainfall_mm', .))
 
-    d <- d %>%
-      mutate(site = 'El_Verde') %>%
-      mutate(month = str_split_fixed(DATE, '/', n = Inf)[,1],
-             day = str_split_fixed(DATE, '/', n = Inf)[,2],
-             year = str_split_fixed(DATE, '/', n = Inf)[,3]) %>%
-      mutate(day = ifelse(nchar(day) == 1, paste0(0, day), day)) %>%
-      mutate(year = ifelse(nchar(year) >= 5, str_split_fixed(year, ' ', n = Inf)[,1], year))
+    if('field.comments' %in% names(d)){
 
-
-    precip_name_def <- c('precipitation')
-    names(precip_name_def) <- p_name
-
-    if('Field.Comments' %in% names(d)){
+        d <- d %>%
+            mutate(hour = if_else(nchar(hour) == 0,
+                                  '1200',
+                                  hour),
+                   hour = stringr::str_pad(hour,
+                                           width = 4,
+                                           pad = '0'))
 
         d <- ms_read_raw_csv(preprocessed_tibble = d,
-                             datetime_cols = list('day' = '%d',
-                                                  'month' = '%m',
-                                                  'year' = '%Y'),
-                             datetime_tz = 'Etc/GMT-4',
+                             datetime_cols = c(date = '%Y-%m-%d',
+                                                  hour = '%H%M'),
+                             datetime_tz = 'Etc/GMT+4',
                              site_code_col = 'site',
-                             data_cols =  precip_name_def,
-                             summary_flagcols = 'Field.Comments',
+                             data_cols = c(rainfall_mm = 'precipitation'),
+                             summary_flagcols = 'field.comments',
                              data_col_pattern = '#V#',
-                             set_to_NA = '-9999',
-                             is_sensor = TRUE)
+                             set_to_NA = c('-9999', ''),
+                             is_sensor = TRUE,
+                             keep_empty_rows = TRUE)
 
-        d <- ms_cast_and_reflag(d,
-                                summary_flags_dirty = list('Field.Comments' = c('Cuarentena por Pandemia COVID 19')),
-                                summary_flags_to_drop = list('Field.Comments' = c('BAD', 
-                                                                                  'DATA NOT COLLECTED')),
-                                varflag_col_pattern = NA)
-    } else{
+        d <- ms_cast_and_reflag(
+            d,
+            summary_flags_dirty = list('Field.Comments' = c('Cuarentena por Pandemia COVID 19',
+                                                            'Hurricane rain storm event at the Station was 21.40 inches recorded at the Rain Collector at the roof of the Station. All other rain collectors overflowed and did not capture the event correctly.',
+                                                            'Inicia Cuarentena por Pandemia COVID 19')),
+            summary_flags_to_drop = list('Field.Comments' = c('BAD',  'DATA NOT COLLECTED')),
+            varflag_col_pattern = NA,
+            keep_empty_rows = TRUE
+        )
+
+    } else {
 
         d <- ms_read_raw_csv(preprocessed_tibble = d,
-                             datetime_cols = list('day' = '%d',
-                                                  'month' = '%m',
-                                                  'year' = '%Y'),
-                             datetime_tz = 'Etc/GMT-4',
+                             datetime_cols = c(date = '%Y-%m-%d'),
+                             datetime_tz = 'Etc/GMT+4',
                              site_code_col = 'site',
-                             data_cols =  precip_name_def,
+                             data_cols = c(rainfall_mm = 'precipitation'),
                              data_col_pattern = '#V#',
-                             set_to_NA = '-9999',
-                             is_sensor = TRUE)
+                             set_to_NA = c('-9999', ''),
+                             is_sensor = TRUE,
+                             keep_empty_rows = TRUE)
 
         d <- ms_cast_and_reflag(d,
-                                varflag_col_pattern = NA)
+                                varflag_col_pattern = NA,
+                                keep_empty_rows = TRUE)
     }
 
     return(d)
@@ -338,144 +312,117 @@ process_1_14 <- function(network, domain, prodname_ms, site_code,
 
 #discharge; stream_chemistry: STATUS=READY
 #. handle_errors
-process_1_156 <- function(network, domain, prodname_ms, site_code,
-                          component){
+process_1_156 <- function(network, domain, prodname_ms, site_code, component){
 
     #info on luqillo data
     #https://www.sas.upenn.edu/lczodata/content/quebrada-three-bisley-q3
 
+    rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
+                    n = network,
+                    d = domain,
+                    p = prodname_ms,
+                    s = site_code,
+                    c = component)
+
     if(prodname_ms == 'stream_chemistry__156'){
 
-        rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
-                       n = network,
-                       d = domain,
-                       p = prodname_ms,
-                       s = site_code,
-                       c = component)
-
-        d <- read.csv(rawfile,
-                      colClasses = 'character') %>%
-          select(DATE, meanTempq1, meanTempq2, meanTempq3) %>%
-          pivot_longer(cols = c(meanTempq1, meanTempq2, meanTempq3)) %>%
-          mutate(month = str_split_fixed(DATE, '/', n = Inf)[,1],
-                 day = str_split_fixed(DATE, '/', n = Inf)[,2],
-                 year = str_split_fixed(DATE, '/', n = Inf)[,3]) %>%
-          mutate(day = ifelse(nchar(day) == 1, paste0(0, day), day)) %>%
-          mutate(year = ifelse(nchar(year) >= 5, str_split_fixed(year, ' ', n = Inf)[,1], year))
-
+        d <- read.csv(rawfile, colClasses = 'character') %>%
+            select(DATE, meanTempq1, meanTempq2, meanTempq3) %>%
+            pivot_longer(cols = c(meanTempq1, meanTempq2, meanTempq3))
 
         d <- ms_read_raw_csv(preprocessed_tibble = d,
-                             datetime_cols = list('day' = '%d',
-                                                  'month' = '%m',
-                                                  'year' = '%Y'),
-                             datetime_tz = 'Etc/GMT-4',
+                             datetime_cols = c(DATE = '%Y-%m-%d'),
+                             datetime_tz = 'Etc/GMT+4',
                              site_code_col = 'name',
                              alt_site_code = list('Q1' = 'meanTempq1',
                                                   'Q2' = 'meanTempq2',
                                                   'Q3' = 'meanTempq3'),
-                             data_cols =  c('value'='temp'),
+                             data_cols =  c('value' = 'temp'),
                              data_col_pattern = '#V#',
-                             set_to_NA = '-9999',
+                             set_to_NA = c('-9999', ''),
                              is_sensor = TRUE)
 
-        d <- ms_cast_and_reflag(d,
-                              varflag_col_pattern = NA)
-    } else{
+        d <- ms_cast_and_reflag(d, varflag_col_pattern = NA)
 
-        rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
-                       n = network,
-                       d = domain,
-                       p = prodname_ms,
-                       s = site_code,
-                       c = component)
+    } else {
 
-        #Converting from mm/day to leters/s
-        d <- read.csv(rawfile,
-                      colClasses = 'character') %>%
-          select(DATE, Q1, Q2, Q3) %>%
-          mutate(Q1 = (((as.numeric(Q1)/1000000)*0.067)*1000000000000)/86400,
-                 Q2 = (((as.numeric(Q2)/1000000)*0.0634)*1000000000000)/86400,
-                 Q3 = (((as.numeric(Q3)/1000000)*0.35)*1000000000000)/86400) %>%
-          mutate(Q1 = as.character(Q1),
-                 Q2 = as.character(Q2),
-                 Q3 = as.character(Q3)) %>%
-          pivot_longer(cols = c(Q1, Q2, Q3)) %>%
-          mutate(month = str_split_fixed(DATE, '/', n = Inf)[,1],
-                 day = str_split_fixed(DATE, '/', n = Inf)[,2],
-                 year = str_split_fixed(DATE, '/', n = Inf)[,3]) %>%
-          mutate(day = ifelse(nchar(day) == 1, paste0(0, day), day)) %>%
-          mutate(year = ifelse(nchar(year) >= 5, str_split_fixed(year, ' ', n = Inf)[,1], year))
+        Q1A <- filter(site_data, site_code == 'Q1')$ws_area_ha
+        Q2A <- filter(site_data, site_code == 'Q2')$ws_area_ha
+        Q3A <- filter(site_data, site_code == 'Q3')$ws_area_ha
+
+        d <- read.csv(rawfile, colClasses = 'character') %>%
+            select(DATE, Q1, Q2, Q3) %>%
+            mutate(Q1 = as.character(runoff_to_discharge(Q1, Q1A)),
+                   Q2 = as.character(runoff_to_discharge(Q2, Q2A)),
+                   Q3 = as.character(runoff_to_discharge(Q3, Q3A))) %>%
+            pivot_longer(cols = c(Q1, Q2, Q3))
 
         d <- ms_read_raw_csv(preprocessed_tibble = d,
-                             datetime_cols = list('day' = '%d',
-                                                  'month' = '%m',
-                                                  'year' = '%Y'),
-                             datetime_tz = 'Etc/GMT-4',
+                             datetime_cols = c(DATE = '%Y-%m-%d'),
+                             datetime_tz = 'Etc/GMT+4',
                              site_code_col = 'name',
-                             data_cols =  c('value'='discharge'),
+                             data_cols =  c('value' = 'discharge'),
                              data_col_pattern = '#V#',
-                             set_to_NA = '-9999',
+                             set_to_NA = c('-9999', ''),
                              is_sensor = TRUE)
 
-        d <- ms_cast_and_reflag(d,
-                                varflag_col_pattern = NA)
+        d <- ms_cast_and_reflag(d, varflag_col_pattern = NA)
     }
 
     return(d)
 }
 
-#discharge: STATUS=PAUSED
+#discharge: STATUS=READY
 #. handle_errors
-process_1_182 <- function(network, domain, prodname_ms, site_code,
-                          component){
+process_1_182 <- function(network, domain, prodname_ms, site_code, component){
 
-    # There seems to be something wrong with this data product. around 2010
-    # they switch from one rating curve to another and it seems that the
-    # values are too/unreal
-      rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
-                     n = network,
-                     d = domain,
-                     p = prodname_ms,
-                     s = site_code,
-                     c = component)
+    rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
+                   n = network,
+                   d = domain,
+                   p = prodname_ms,
+                   s = site_code,
+                   c = component)
 
       d <- read.csv(rawfile,
-                    colClasses = 'character') %>%
-        mutate(month = str_split_fixed(datetime, '/', n = Inf)[,1],
-               day = str_split_fixed(datetime, '/', n = Inf)[,2],
-               year = str_split_fixed(datetime, '/', n = Inf)[,3]) %>%
-        mutate(day = ifelse(nchar(day) == 1, paste0(0, day), day)) %>%
-        mutate(time =  str_split_fixed(year, ' ', n = Inf)[,2],
-               year =  str_split_fixed(year, ' ', n = Inf)[,1]) %>%
-        mutate(q = ifelse(Discharge.FNS.formula.discharge..m3.sec....1.095...1.585...stage...0.578...stage...stage == '',
-                          discharge.McDowell...0.0005...stage..8.8846..35.314666,
-                          Discharge.FNS.formula.discharge..m3.sec....1.095...1.585...stage...0.578...stage...stage)) %>%
-        mutate(code = ifelse(Notes == '', Discharge.QA.Code.from.DB, Notes)) %>%
-        mutate(site = 'QP')
+                    colClasses = 'character',
+                    fileEncoding = 'ISO-8859-1')
+
+      colnms <- colnames(d)
+      if(
+          ! grepl('datetime', colnms[1], ignore.case = TRUE) ||
+          ! grepl('stage|level', colnms[2], ignore.case = TRUE) ||
+          ! grepl('discharge', colnms[3], ignore.case = TRUE) ||
+          ! grepl('notes', colnms[4], ignore.case = TRUE)
+      ) stop('there has been a change')
+
+      d <- d %>%
+          select(datetime = 1,
+                 discharge = 3,
+                 notes = 4) %>%
+          mutate(site = case_when(grepl('A', component) ~ 'QPA',
+                                  grepl('B', component) ~ 'QPB',
+                                  grepl('Prieta', component) ~ 'QP')) %>%
+          filter(! datetime == '1900-01-00 00:00') #sensor error
 
       d <- ms_read_raw_csv(preprocessed_tibble = d,
-                           datetime_cols = list('day' = '%d',
-                                                'month' = '%m',
-                                                'year' = '%Y',
-                                                'time' = '%H:%M'),
-                           datetime_tz = 'Etc/GMT-4',
+                           datetime_cols = c(datetime = '%Y-%m-%d %H:%M'),
+                           datetime_tz = 'Etc/GMT+4',
                            site_code_col = 'site',
-                           data_cols =  c('q'='discharge'),
-                           summary_flagcols = 'code',
+                           data_cols =  'discharge',
+                           summary_flagcols = 'notes',
                            data_col_pattern = '#V#',
-                           set_to_NA = '-9999',
+                           set_to_NA = c('-9999', '', 'nan'),
                            is_sensor = TRUE)
 
-      d <- ms_cast_and_reflag(d,
-                              varflag_col_pattern = NA,
-                              summary_flags_clean = list('code' = c('Checked correct',
-                                                                    'Good')),
-                              summary_flags_dirty = list('code' = c('Sensor error',
-                                                                    'Bad')))
+      d <- ms_cast_and_reflag(
+          d,
+          varflag_col_pattern = NA,
+          summary_flags_clean = list('notes' = c(NA, '', 'Checked correct', 'Good')),
+          summary_flags_to_drop = list('notes' = c('Sensor error', 'Error', 'Bad'))
+      )
 
-    #m3 to liters
-    d <- d %>%
-        mutate(val = val*1000)
+    #m^3 to liters
+    d <- mutate(d, val = val * 1000)
 
     return(d)
 }

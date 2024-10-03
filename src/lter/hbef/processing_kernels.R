@@ -132,8 +132,7 @@ process_0_94 <- function(set_details, network, domain) {
 
 #discharge: STATUS=READY
 #. handle_errors
-process_1_1 <- function(network, domain, prodname_ms, site_code,
-    component){
+process_1_1 <- function(network, domain, prodname_ms, site_code, component){
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
                     n = network,
@@ -144,7 +143,7 @@ process_1_1 <- function(network, domain, prodname_ms, site_code,
 
     d <- ms_read_raw_csv(filepath = rawfile,
                          datetime_cols = c(DATETIME = '%Y-%m-%d %H:%M:%S'),
-                         datetime_tz = 'US/Eastern',
+                         datetime_tz = 'Etc/GMT+5', #EST
                          site_code_col = 'WS',
                          alt_site_code = list('w1' = c('1', 'W1'),
                                               'w2' = c('2', 'W2'),
@@ -167,8 +166,7 @@ process_1_1 <- function(network, domain, prodname_ms, site_code,
 
 #precipitation: STATUS=READY
 #. handle_errors
-process_1_13 <- function(network, domain, prodname_ms, site_code,
-    component){
+process_1_13 <- function(network, domain, prodname_ms, site_code, component){
 
     if(component == 'site info'){
         loginfo('Blacklisting superfluous data component')
@@ -185,22 +183,25 @@ process_1_13 <- function(network, domain, prodname_ms, site_code,
     # SAMPLE: Sensor (also manual. Use a mix of automatic gauges and standard guages)
     d <- ms_read_raw_csv(filepath = rawfile,
                          datetime_cols = c(DATE = '%Y-%m-%d'),
-                         datetime_tz = 'US/Eastern',
+                         datetime_tz = 'Etc/GMT+5',
                          site_code_col = 'rainGage',
                          data_cols = c(Precip = 'precipitation'),
                          data_col_pattern = '#V#',
-                         is_sensor = FALSE)
+                         is_sensor = FALSE,
+                         keep_empty_rows = TRUE)
+
+    d <- filter(d, site_code != 'RG18')
 
     d <- ms_cast_and_reflag(d,
-                            varflag_col_pattern = NA)
+                            varflag_col_pattern = NA,
+                            keep_empty_rows = TRUE)
 
     return(d)
 }
 
 #stream_chemistry; precip_chemistry: STATUS=READY
 #. handle_errors
-process_1_208 <- function(network, domain, prodname_ms, site_code,
-    component){
+process_1_208 <- function(network, domain, prodname_ms, site_code, component){
 
     if(component == 'Analytical Methods'){
         loginfo('Blacklisting superfluous data component')
@@ -214,40 +215,94 @@ process_1_208 <- function(network, domain, prodname_ms, site_code,
                     s = site_code,
                     c = component)
 
-    d <- ms_read_raw_csv(filepath = rawfile,
-                         datetime_cols = c(date = '%Y-%m-%d',
-                                           timeEST = '%H:%M'),
-                         datetime_tz = 'US/Eastern',
-                         site_code_col = 'site',
-                         alt_site_code = list('w1' = c('1', 'W1'),
-                                              'w2' = c('2', 'W2'),
-                                              'w3' = c('3', 'W3'),
-                                              'w4' = c('4', 'W4'),
-                                              'w5' = c('5', 'W5'),
-                                              'w6' = c('6', 'W6'),
-                                              'w7' = c('7', 'W7'),
-                                              'w8' = c('8', 'W8'),
-                                              'w9' = c('9', 'W9')),
-                         data_cols = c('pH', 'DIC', 'spCond', 'temp',
-                                       'ANC960', 'ANCMet', 'Ca', 'Mg', 'K',
-                                       'Na', 'TMAl', 'OMAl', 'Al_ICP', 'Al_ferron',
-                                       'NH4', 'SO4', 'NO3', 'Cl',
-                                       'PO4', 'DOC', 'TDN', 'DON',
-                                       'SiO2', 'Mn', 'Fe', 'F',
-                                       'cationCharge', 'anionCharge',
-                                       'theoryCond', 'ionError', 'ionBalance',
-                                       'pHmetrohm'),
-                         data_col_pattern = '#V#',
-                         is_sensor = FALSE,
-                         set_to_NA = -999.9, #also -3, but that can be a real value in other columns. will get dropped in postprocessing
-                         summary_flagcols = 'fieldCode')
+    d <- read.csv(rawfile, colClasses = 'character')
 
-    d <- ms_cast_and_reflag(d,
-                            summary_flags_to_drop = list(fieldCode = 9999), #not a real code
-                            summary_flags_dirty = list(fieldCode = c(969, 970)),
-                            varflag_col_pattern = NA)
+    #one day we may track methods more closely, but for now (20240412) hbef
+    #is the only domain distinguishing among pH and ANC methods, so consolidate
+    d <- d %>%
+        mutate(ANC = if_else(is.na(ANCMet), ANC960, ANCMet),
+               pH = if_else(is.na(pHmetrohm), pH, pHmetrohm)) %>%
+        select(-ANCMet, -ANC960, -pHmetrohm) %>%
+        mutate(fieldCode = if_else(grepl('969|955|970|905', fieldCode),
+                                   '969', #sometimes two codes are combined. consolidate here
+                                   fieldCode))
 
-    d <- ms_conversions(d,
+    if(grepl('precip', prodname_ms)){
+
+        d <- ms_read_raw_csv(preprocessed_tibble = d,
+                             datetime_cols = c(date = '%Y-%m-%d',
+                                               timeEST = '%H:%M'),
+                             datetime_tz = 'Etc/GMT+5',
+                             site_code_col = 'site',
+                             alt_site_code = list('w1' = c('1', 'W1'),
+                                                  'w2' = c('2', 'W2'),
+                                                  'w3' = c('3', 'W3'),
+                                                  'w4' = c('4', 'W4'),
+                                                  'w5' = c('5', 'W5'),
+                                                  'w6' = c('6', 'W6'),
+                                                  'w7' = c('7', 'W7'),
+                                                  'w8' = c('8', 'W8'),
+                                                  'w9' = c('9', 'W9')),
+                             data_cols = c('pH', 'DIC', 'spCond', 'temp',
+                                           'ANC', 'Ca', 'Mg', 'K',
+                                           'Na', 'TMAl', 'OMAl', Al_ICP = 'TAl', 'Al_ferron',
+                                           'NH4', 'SO4', 'NO3', 'Cl',
+                                           'PO4', 'DOC', 'TDN', 'DON',
+                                           'SiO2', 'Mn', 'Fe', 'F',
+                                           'cationCharge', 'anionCharge',
+                                           'ionBalance'),
+                             data_col_pattern = '#V#',
+                             is_sensor = FALSE,
+                             set_to_NA = -999.9,
+                             summary_flagcols = 'fieldCode',
+                             keep_empty_rows = TRUE)
+
+        d <- ms_cast_and_reflag(
+            d,
+            summary_flags_to_drop = list(fieldCode = 'sentinel'),
+            summary_flags_dirty = list(fieldCode = c('969', '970', '905', '955')),
+            varflag_col_pattern = NA,
+            keep_empty_rows = TRUE
+        )
+
+    } else {
+
+        d <- ms_read_raw_csv(preprocessed_tibble = d,
+                             datetime_cols = c(date = '%Y-%m-%d',
+                                               timeEST = '%H:%M'),
+                             datetime_tz = 'Etc/GMT+5',
+                             site_code_col = 'site',
+                             alt_site_code = list('w1' = c('1', 'W1'),
+                                                  'w2' = c('2', 'W2'),
+                                                  'w3' = c('3', 'W3'),
+                                                  'w4' = c('4', 'W4'),
+                                                  'w5' = c('5', 'W5'),
+                                                  'w6' = c('6', 'W6'),
+                                                  'w7' = c('7', 'W7'),
+                                                  'w8' = c('8', 'W8'),
+                                                  'w9' = c('9', 'W9')),
+                             data_cols = c('pH', 'DIC', 'spCond', 'temp',
+                                           'ANC', 'Ca', 'Mg', 'K',
+                                           'Na', 'TMAl', 'OMAl', Al_ICP = 'TAl', 'Al_ferron',
+                                           'NH4', 'SO4', 'NO3', 'Cl',
+                                           'PO4', 'DOC', 'TDN', 'DON',
+                                           'SiO2', 'Mn', 'Fe', 'F',
+                                           'cationCharge', 'anionCharge',
+                                           'ionBalance'),
+                             data_col_pattern = '#V#',
+                             is_sensor = FALSE,
+                             set_to_NA = -999.9,
+                             summary_flagcols = 'fieldCode')
+
+        d <- ms_cast_and_reflag(
+            d,
+            summary_flags_to_drop = list(fieldCode = 'sentinel'),
+            summary_flags_dirty = list(fieldCode = c('969', '970', '905', '955')),
+            varflag_col_pattern = NA
+        )
+    }
+
+    d <- ms_conversions_(d,
                         convert_units_from = c(DIC = 'umol/l'),
                         convert_units_to = c(DIC = 'mg/l'))
 
@@ -256,8 +311,7 @@ process_1_208 <- function(network, domain, prodname_ms, site_code,
 
 #ws_boundary: STATUS=READY
 #. handle_errors
-process_1_94 <- function(network, domain, prodname_ms, site_code,
-                         component){
+process_1_94 <- function(network, domain, prodname_ms, site_code, component){
 
     rawdir <- glue('data/{n}/{d}/raw/{p}/{s}',
                    n=network, d=domain, p=prodname_ms, s=site_code)
@@ -307,8 +361,7 @@ process_1_94 <- function(network, domain, prodname_ms, site_code,
 
 #precip_gauge_locations: STATUS=READY
 #. handle_errors
-process_1_100 <- function(network, domain, prodname_ms, site_code,
-                          component){
+process_1_100 <- function(network, domain, prodname_ms, site_code, component){
 
     rawdir <- glue('data/{n}/{d}/raw/{p}/{s}',
                    n=network, d=domain, p=prodname_ms, s=site_code)
@@ -350,8 +403,7 @@ process_1_100 <- function(network, domain, prodname_ms, site_code,
 
 #stream_gauge_locations: STATUS=READY
 #. handle_errors
-process_1_107 <- function(network, domain, prodname_ms, site_code,
-                          component){
+process_1_107 <- function(network, domain, prodname_ms, site_code, component){
 
     rawdir <- glue('data/{n}/{d}/raw/{p}/{s}',
                    n=network, d=domain, p=prodname_ms, s=site_code)

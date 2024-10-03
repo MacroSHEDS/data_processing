@@ -1,5 +1,5 @@
-x0 = read_csv('data/krycklan/krycklan/raw/stream_chemistry__VERSIONLESS003/sitecode_NA/KCS 101 data 2021-06-08.csv', col_types = 'Dnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn')
-# x0 = read.csv('data/krycklan/krycklan/raw/stream_chemistry__VERSIONLESS003/sitecode_NA/KCS 101 data 2021-06-08.csv') %>%
+x0 = read_csv('data/krycklan/krycklan/raw/stream_chemistry__VERSIONLESS003/sitename_NA/KCS 101 data 2021-06-08.csv', col_types = 'Dnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn')
+# x0 = read.csv('data/krycklan/krycklan/raw/stream_chemistry__VERSIONLESS003/sitename_NA/KCS 101 data 2021-06-08.csv') %>%
 #     filter(SiteID == '1')
 # cbind(x0$Date, x0$Br.µg.l) %>% head(n = 375) %>% tail(n=30)
 

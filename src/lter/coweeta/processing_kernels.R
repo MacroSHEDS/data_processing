@@ -177,7 +177,7 @@ process_1_7 <- function(network, domain, prodname_ms, site_code,
     select(-num_t, -RecHour, -num_d, -Recday)
 
   d <- ms_read_raw_csv(preprocessed_tibble = d,
-                       datetime_cols = list('RecYear' = '%Y',
+                       datetime_cols = c('RecYear' = '%Y',
                                             'RecMonth' = '%m',
                                             'day' = '%d',
                                             'time' = '%H%M'),
@@ -233,7 +233,7 @@ process_1_8 <- function(network, domain, prodname_ms, site_code,
     select(-num_t, -RecHour, -num_d, -RecDay)
 
   d <- ms_read_raw_csv(preprocessed_tibble = d,
-                       datetime_cols = list('RecYear' = '%Y',
+                       datetime_cols = c('RecYear' = '%Y',
                                             'RecMonth' = '%m',
                                             'day' = '%d',
                                             'time' = '%H%M'),
@@ -289,7 +289,7 @@ process_1_9 <- function(network, domain, prodname_ms, site_code,
     select(-num_t, -RecHour, -num_d, -RecDay)
 
   d <- ms_read_raw_csv(preprocessed_tibble = d,
-                       datetime_cols = list('RecYear' = '%Y',
+                       datetime_cols = c('RecYear' = '%Y',
                                             'RecMonth' = '%m',
                                             'day' = '%d',
                                             'time' = '%H%M'),
@@ -345,7 +345,7 @@ process_1_10 <- function(network, domain, prodname_ms, site_code,
     select(-num_t, -RecHour, -num_d, -RecDay)
 
   d <- ms_read_raw_csv(preprocessed_tibble = d,
-                       datetime_cols = list('RecYear' = '%Y',
+                       datetime_cols = c('RecYear' = '%Y',
                                             'RecMonth' = '%m',
                                             'day' = '%d',
                                             'time' = '%H%M'),
@@ -428,7 +428,7 @@ process_1_50 <- function(network, domain, prodname_ms, site_code,
                             'sfkc', 'tube', 'kzfl', 'shan', 'hikx'))
 
   d <- ms_read_raw_csv(preprocessed_tibble = d,
-                       datetime_cols = list('RecYear' = '%Y',
+                       datetime_cols = c('RecYear' = '%Y',
                                             'RecMonth' = '%m',
                                             'day' = '%d',
                                             'time' = '%H%M'),
@@ -445,7 +445,7 @@ process_1_50 <- function(network, domain, prodname_ms, site_code,
                                            'KZFL' = 'kzfl',
                                            'SHAN' = 'shan',
                                            'HIKX' = 'hikx'),
-                       data_cols =  c('NO3', 'NH4'='NH4_N', 'TN', 'SRP', 'TP', 'DOC'),
+                       data_cols =  c('NO3', 'NH4'='NH4_N', 'TN', 'orthophosphate_P'='SRP', 'TP', 'DOC'),
                        data_col_pattern = '#V#',
                        var_flagcol_pattern = '#V#_code',
                        summary_flagcols = 'check',
@@ -461,14 +461,14 @@ process_1_50 <- function(network, domain, prodname_ms, site_code,
 
   d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
-  d <- ms_conversions(d,
+  d <- ms_conversions_(d,
                      # convert_molecules = c('NO3', 'SO4', 'PO4', 'SiO2',
                      #                       'NH4', 'NH3'),
                       convert_units_from = c(NO3 = 'ug/l', NH4_N = 'ug/l',
-                                             TN = 'ug/l', SRP = 'ug/l',
+                                             TN = 'ug/l', orthophosphate_P = 'ug/l',
                                              TP = 'ug/l'),
                       convert_units_to = c(NO3 = 'mg/l', NH4_N = 'mg/l',
-                                           TN = 'mg/l', SRP = 'mg/l',
+                                           TN = 'mg/l', orthophosphate_P = 'mg/l',
                                            TP = 'mg/l'))
 
   d <- synchronize_timestep(d)
@@ -489,7 +489,7 @@ process_1_51 <- function(network, domain, prodname_ms, site_code,
                   c = component)
 
   d <- ms_read_raw_csv(filepath = rawfile1,
-                       datetime_cols = list('RecYear' = '%Y',
+                       datetime_cols = c('RecYear' = '%Y',
                                             'RecMonth' = '%m',
                                             'RecDay' = '%d',
                                             'RecTime' = '%H%M'),
@@ -543,7 +543,7 @@ process_1_20 <- function(network, domain, prodname_ms, site_code,
     select(-num_t, -Rectime, -num_d, -RecDay)
 
   d <- ms_read_raw_csv(preprocessed_tibble = d,
-                       datetime_cols = list('RecYear' = '%Y',
+                       datetime_cols = c('RecYear' = '%Y',
                                             'RecMonth' = '%m',
                                             'day' = '%d',
                                             'time' = '%H%M'),
@@ -588,7 +588,7 @@ process_1_21 <- function(network, domain, prodname_ms, site_code,
                             component == 'ASW012' ~ 'N04D'))
 
   d <- ms_read_raw_csv(preprocessed_tibble = d,
-                       datetime_cols = list('Date' = '%m/%d/%Y',
+                       datetime_cols = c('Date' = '%m/%d/%Y',
                                             'Time' = '%H:%M:%S'),
                        datetime_tz = 'US/Central',
                        site_code_col = 'site',
@@ -636,7 +636,7 @@ process_1_43 <- function(network, domain, prodname_ms, site_code,
            Watershed != '')
 
   d <- ms_read_raw_csv(preprocessed_tibble = d,
-                       datetime_cols = list('RecYear' = '%Y',
+                       datetime_cols = c('RecYear' = '%Y',
                                             'RecMonth' = '%m',
                                             'day' = '%d'),
                        datetime_tz = 'US/Central',
@@ -647,7 +647,7 @@ process_1_43 <- function(network, domain, prodname_ms, site_code,
                                             'N4DF' = c('N04D', 'n04d'),
                                             'N01B' = 'n01b'),
                        data_cols =  c('NO3'='NO3_N', 'NH4'='NH4_N', 'TPN'='TPsN',
-                                      'SRP', 'TPP'),
+                                      'orthophosphate_P'='SRP', 'TPP'),
                        data_col_pattern = '#V#',
                        summary_flagcols = 'Comments',
                        is_sensor = FALSE)
@@ -661,14 +661,14 @@ process_1_43 <- function(network, domain, prodname_ms, site_code,
 
   d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
-  d <- ms_conversions(d,
+  d <- ms_conversions_(d,
                      # convert_molecules = c('NO3', 'SO4', 'PO4', 'SiO2',
                      #                       'NH4', 'NH3'),
                       convert_units_from = c(NO3 = 'ug/l', NH4_N = 'ug/l',
-                                             TPsN = 'ug/l', SRP = 'ug/l',
+                                             TPsN = 'ug/l', orthophosphate_P = 'ug/l',
                                              TPP = 'ug/l'),
                       convert_units_to = c(NO3 = 'mg/l', NH4_N = 'mg/l',
-                                           TPsN = 'mg/l', SRP = 'mg/l',
+                                           TPsN = 'mg/l', orthophosphate_P = 'mg/l',
                                            TPP = 'mg/l'))
 
   d <- synchronize_timestep(d)
@@ -691,7 +691,7 @@ process_1_4 <- function(network, domain, prodname_ms, site_code,
   d <- read.csv(rawfile1, colClasses = "character")
 
   d <- ms_read_raw_csv(filepath = rawfile1,
-                       datetime_cols = list('RecDate' = '%m/%d/%Y'),
+                       datetime_cols = c('RecDate' = '%m/%d/%Y'),
                        datetime_tz = 'US/Central',
                        site_code_col = 'watershed',
                        alt_site_code = list('HQ02' = 'HQ'),

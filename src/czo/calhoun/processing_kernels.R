@@ -3,7 +3,7 @@
 
 #precipitation: STATUS=READY
 #. handle_errors
-process_0_6421 <- function(set_details, network, domain) {
+process_0_6421 <- function(set_details, network, domain){
 
     download_raw_file(network = network,
                       domain = domain,
@@ -15,7 +15,7 @@ process_0_6421 <- function(set_details, network, domain) {
 
 #discharge: STATUS=READY
 #. handle_errors
-process_0_6470 <- function(set_details, network, domain) {
+process_0_6470 <- function(set_details, network, domain){
 
     download_raw_file(network = network,
                       domain = domain,
@@ -27,7 +27,7 @@ process_0_6470 <- function(set_details, network, domain) {
 
 #discharge; precipitation: STATUS=READY
 #. handle_errors
-process_0_4680 <- function(set_details, network, domain) {
+process_0_4680 <- function(set_details, network, domain){
 
     download_raw_file(network = network,
                       domain = domain,
@@ -38,7 +38,7 @@ process_0_4680 <- function(set_details, network, domain) {
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
-process_0_2851 <- function(set_details, network, domain) {
+process_0_2851 <- function(set_details, network, domain){
 
     raw_data_dest = glue('{wd}/data/{n}/{d}/raw/{p}/{s}',
                          wd = getwd(),
@@ -66,7 +66,7 @@ process_0_2851 <- function(set_details, network, domain) {
 #precipitation: STATUS=READY
 #. handle_errors
 process_1_6421 <- function(network, domain, prodname_ms, site_code,
-                           component) {
+                           component){
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
                     n = network,
@@ -82,16 +82,18 @@ process_1_6421 <- function(network, domain, prodname_ms, site_code,
         mutate(time = ifelse(nchar(time) == 4, paste0(0, time), time))
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('date' = '%m/%e/%Y',
+                         datetime_cols = c('date' = '%m/%e/%Y',
                                               'time' = '%H:%M'),
                          datetime_tz = 'US/Eastern',
                          site_code_col = 'site',
                          data_cols =  c('precipitation..mm.' = 'precipitation'),
                          data_col_pattern = '#V#',
-                         is_sensor = TRUE)
+                         is_sensor = TRUE,
+                         keep_empty_rows = TRUE)
 
     d <- ms_cast_and_reflag(d,
-                            varflag_col_pattern = NA)
+                            varflag_col_pattern = NA,
+                            keep_empty_rows = TRUE)
 
     return(d)
 }
@@ -99,7 +101,7 @@ process_1_6421 <- function(network, domain, prodname_ms, site_code,
 #discharge: STATUS=READY
 #. handle_errors
 process_1_6470 <- function(network, domain, prodname_ms, site_code,
-                           component) {
+                           component){
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
                     n = network,
@@ -115,7 +117,7 @@ process_1_6470 <- function(network, domain, prodname_ms, site_code,
         mutate(time = ifelse(nchar(time) == 4, paste0(0, time), time))
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('date' = '%m/%e/%Y',
+                         datetime_cols = c('date' = '%m/%e/%Y',
                                               'time' = '%H:%M'),
                          datetime_tz = 'US/Eastern',
                          site_code_col = 'site',
@@ -133,7 +135,7 @@ process_1_6470 <- function(network, domain, prodname_ms, site_code,
 #precipitation; discharge: STATUS=READY
 #. handle_errors
 process_1_4680 <- function(network, domain, prodname_ms, site_code,
-                           components) {
+                           components){
 
     rawdir <- glue('data/{n}/{d}/raw/{p}/{s}',
                     n = network,
@@ -161,22 +163,29 @@ process_1_4680 <- function(network, domain, prodname_ms, site_code,
                                 'rain_gauge9',
                                 'rain_gauge11')
 
-            site <- readxl::read_xlsx(rain_files[p]) %>%
+            site <- sm(readxl::read_xlsx(rain_files[p]) %>%
                 rename(date = 1,
-                      rain = 2) %>%
-                mutate(site = !!site_code) %>%
-                select(date, rain, site)
+                       rain = 2) %>%
+                mutate(site = !!site_code,
+                       rain = rain * 25.4) %>% #in to mm
+                select(date, rain, site))
 
             all_sites <- rbind(all_sites, site)
         }
 
         d <- ms_read_raw_csv(preprocessed_tibble = all_sites,
-                             datetime_cols = list('date' = '%Y-%m-%d %H:%M:%S'),
-                             datetime_tz = 'US/Eastern',
+                             datetime_cols = c('date' = '%Y-%m-%d %H:%M:%S'),
+                             datetime_tz = 'UTC',
+                             # datetime_tz = 'US/Eastern',
                              site_code_col = 'site',
                              data_cols =  c('rain' = 'precipitation'),
                              data_col_pattern = '#V#',
-                             is_sensor = TRUE)
+                             is_sensor = TRUE,
+                             keep_empty_rows = TRUE)
+
+        d <- ms_cast_and_reflag(d,
+                                varflag_col_pattern = NA,
+                                keep_empty_rows = TRUE)
 
     } else {
 
@@ -191,43 +200,36 @@ process_1_4680 <- function(network, domain, prodname_ms, site_code,
                               site_raw == 'Stream 3' ~ 'weir_3',
                               site_raw == 'Stream 4' ~ 'weir_4')
 
-            if(p %in% c(16, 24)){
-
-                site <- readxl::read_xlsx(q_files[p]) %>%
-                    rename(date = 3,
-                           q = 2) %>%
-                    mutate(site = !!site_n) %>%
-                    select(date, q, site)
-            } else{
-
-                site <- readxl::read_xlsx(q_files[p]) %>%
-                    rename(date = 1,
-                           q = 3) %>%
-                    mutate(site = !!site_n) %>%
-                    select(date, q, site)
-            }
+            site <- sm(readxl::read_xlsx(q_files[p],
+                                         sheet = 'Sheet2') %>%
+                rename(date = 1,
+                       q = 3) %>%
+                mutate(site = !!site_n) %>%
+                select(date, q, site))
 
             all_sites <- rbind(all_sites, site)
         }
 
         all_sites <- all_sites %>%
-            mutate(q = q*28.317)
+            mutate(q = q * 28.317)
 
         d <- ms_read_raw_csv(preprocessed_tibble = all_sites,
-                             datetime_cols = list('date' = '%Y-%m-%d %H:%M:%S'),
-                             datetime_tz = 'US/Eastern',
+                             datetime_cols = c('date' = '%Y-%m-%d %H:%M:%S'),
+                             # datetime_tz = 'US/Eastern',
+                             datetime_tz = 'UTC',
                              site_code_col = 'site',
                              data_cols =  c('q' = 'discharge'),
                              data_col_pattern = '#V#',
                              is_sensor = TRUE)
+
+        d <- ms_cast_and_reflag(d,
+                                varflag_col_pattern = NA)
     }
 
-    d <- ms_cast_and_reflag(d,
-                            varflag_col_pattern = NA)
 
-    unlink(zipped_files, recursive = FALSE)
-
-    unlink('data/czo/calhoun/raw/precipitation__4680/sitename_NA/Stream/Stream 2/', recursive = FALSE)
+    unlink(file.path(rawdir, 'Rainfall'), recursive = TRUE)
+    unlink(file.path(rawdir, 'Stream'), recursive = TRUE)
+    unlink(file.path(rawdir, 'calhoun-hydrology-gps.xlsx'))
 
     return(d)
 }
@@ -235,7 +237,7 @@ process_1_4680 <- function(network, domain, prodname_ms, site_code,
 #stream_chemistry: STATUS=READY
 #. handle_errors
 process_1_2851 <- function(network, domain, prodname_ms, site_code,
-                           component) {
+                           component){
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
                     n = network,
@@ -248,7 +250,7 @@ process_1_2851 <- function(network, domain, prodname_ms, site_code,
         mutate_all(as.character)
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('Date' = '%Y-%m-%d'),
+                         datetime_cols = c('Date' = '%Y-%m-%d'),
                          datetime_tz = 'US/Mountain',
                          site_code_col = 'sample_location',
                          alt_site_code = list('Tyger_River_hwy49' = 'A17',
@@ -298,7 +300,7 @@ process_1_2851 <- function(network, domain, prodname_ms, site_code,
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
 
-    d <- ms_conversions(d,
+    d <- ms_conversions_(d,
                         convert_units_from = c('Fe' = 'umol/l',
                                                'Al' = 'umol/l',
                                                'Mn' = 'umol/l'),
@@ -323,6 +325,21 @@ process_2_ms001 <- precip_gauge_from_site_data
 #. handle_errors
 process_2_ms002 <- stream_gauge_from_site_data
 
+#precipitation: STATUS=READY
+#. handle_errors
+process_2_ms003 <- function(network, domain, prodname_ms){
+
+    combine_products(
+        network = network,
+        domain = domain,
+        prodname_ms = prodname_ms,
+        input_prodname_ms = c('precipitation__6421',
+                              'precipitation__4680')
+    )
+
+    return()
+}
+
 #precip_pchem_pflux: STATUS=READY
 #. handle_errors
 process_2_ms005 <- derive_precip_pchem_pflux
@@ -330,3 +347,18 @@ process_2_ms005 <- derive_precip_pchem_pflux
 #stream_flux_inst: STATUS=READY
 #. handle_errors
 process_2_ms004 <- derive_stream_flux
+
+#discharge: STATUS=READY
+#. handle_errors
+process_2_ms006 <- function(network, domain, prodname_ms){
+
+    combine_products(
+        network = network,
+        domain = domain,
+        prodname_ms = prodname_ms,
+        input_prodname_ms = c('discharge__6470',
+                              'discharge__4680')
+    )
+
+    return()
+}

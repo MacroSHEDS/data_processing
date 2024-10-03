@@ -92,7 +92,7 @@ dd = dd %>%
 sc_new = filter(dd, ProjectID == 101) %>% select(-ProjectID) %>% arrange(Date)
 pc_new = filter(dd, ProjectID == 201) %>% select(-ProjectID) %>% arrange(Date)
 
-sc_old = read_csv('data/krycklan/krycklan/raw/stream_chemistry__VERSIONLESS003/sitecode_NA/KCS 101 data 2021-06-08.csv')
+sc_old = read_csv('data/krycklan/krycklan/raw/stream_chemistry__VERSIONLESS003/sitename_NA/KCS 101 data 2021-06-08.csv')
 old_cols_keep = setdiff(colnames(sc_old), unique(d$Parameter))
 # setdiff(unique(d$Parameter), colnames(sc_old))
 
@@ -101,7 +101,7 @@ sc_new = sc_old %>%
     full_join(sc_new, by = c('SiteID', 'Date')) %>%
     arrange(Date)
 
-pc_old = read_csv('data/krycklan/krycklan/raw/precip_chemistry__VERSIONLESS002/sitecode_NA/KCS 201 data 2021-06-08.csv')
+pc_old = read_csv('data/krycklan/krycklan/raw/precip_chemistry__VERSIONLESS002/sitename_NA/KCS 201 data 2021-06-08.csv')
 old_cols_keep = setdiff(colnames(pc_old), unique(d$Parameter))
 # setdiff(unique(d$Parameter), colnames(sc_old))
 
@@ -110,14 +110,14 @@ pc_new = pc_old %>%
     full_join(pc_new, by = c('SiteID', 'Date')) %>%
     arrange(Date)
 
-write_csv(sc_new, 'data/krycklan/krycklan/raw/stream_chemistry__VERSIONLESS003/sitecode_NA/KCS 101 data 2022-11-19.csv')
-write_csv(pc_new, 'data/krycklan/krycklan/raw/precip_chemistry__VERSIONLESS002/sitecode_NA/KCS 201 data 2022-11-19.csv')
+write_csv(sc_new, 'data/krycklan/krycklan/raw/stream_chemistry__VERSIONLESS003/sitename_NA/KCS 101 data 2022-11-19.csv')
+write_csv(pc_new, 'data/krycklan/krycklan/raw/precip_chemistry__VERSIONLESS002/sitename_NA/KCS 201 data 2022-11-19.csv')
 
 # scraps ####
 
 xx = read_feather('macrosheds/data_acquisition/data/krycklan/krycklan/derived/stream_chemistry__ms001/Site1.feather')
 
-dxr = read_csv('macrosheds/data_acquisition/data/krycklan/krycklan/raw/stream_chemistry__VERSIONLESS003/sitecode_NA/KCS 101 data 2021-06-08.csv')
+dxr = read_csv('macrosheds/data_acquisition/data/krycklan/krycklan/raw/stream_chemistry__VERSIONLESS003/sitename_NA/KCS 101 data 2021-06-08.csv')
 
 
 

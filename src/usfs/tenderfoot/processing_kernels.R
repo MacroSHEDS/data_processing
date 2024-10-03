@@ -124,7 +124,9 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
                     s = site_code,
                     c = component)
 
-    temp_dir <- tempdir()
+	temp_dir <- file.path(tempdir(), domain)
+    dir.create(temp_dir, recursive = TRUE, showWarnings = FALSE)
+
     unzip(rawfile, exdir = temp_dir)
     fils <- list.files(temp_dir, recursive = T)
 
@@ -146,7 +148,7 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
 
     #DATETIME is messed up cuz of one digit thing
     d <- ms_read_raw_csv(preprocessed_tibble = all_q,
-                         datetime_cols = list('datetime1' = '%m/%d/%Y %H:%M'),
+                         datetime_cols = c('datetime1' = '%m/%d/%Y %H:%M'),
                          datetime_tz = 'US/Mountain',
                          site_code_col = 'site_code',
                          data_cols =  c('val' = 'discharge'),
@@ -199,7 +201,9 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
                     s = site_code,
                     c = component)
 
-    temp_dir <- tempdir()
+    temp_dir <- file.path(tempdir(), domain)
+    dir.create(temp_dir, recursive = TRUE, showWarnings = FALSE)
+
     unzip(rawfile, exdir = temp_dir)
 
     rel_file_path <- paste0(temp_dir, '/', 'Data/Tenderfoot_waterquality_data_1992-2009.csv')
@@ -215,7 +219,7 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
                                 values_from = 'val')
 
     d <- ms_read_raw_csv(preprocessed_tibble = all_chem,
-                         datetime_cols = list('date' = 'X%m.%d.%Y'),
+                         datetime_cols = c('date' = 'X%m.%d.%Y'),
                          datetime_tz = 'US/Mountain',
                          site_code_col = 'Flume',
                          data_cols =  c('Field Water Temperature' = 'temp',
@@ -260,7 +264,7 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
 
-    d <- ms_conversions(d, convert_units_from = c('SO4' = 'mg/l'), convert_units_to = c('SO4' = 'mg/l')) # going from mg/l to mg/l as S
+    d <- ms_conversions_(d, convert_units_from = c('SO4' = 'mg/l'), convert_units_to = c('SO4' = 'mg/l')) # going from mg/l to mg/l as S
 
     d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 

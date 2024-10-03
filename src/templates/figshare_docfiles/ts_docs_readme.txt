@@ -1,6 +1,6 @@
 These files provide detailed documentation of the code involved in preparing individual
 MacroSheds products for specific domains and sites. For comprehensive project documentation,
-see https://doi.org/10.6084/m9.figshare.c.5621740.
+see the official MacroSheds dataset on EDI: https://portal.edirepository.org/nis/mapbrowse?scope=edi&identifier=1262
 
 MacroSheds products are referred to as <product name>__<product code>. product codes are
 used internally, and are not attached to our downloadable products, however,

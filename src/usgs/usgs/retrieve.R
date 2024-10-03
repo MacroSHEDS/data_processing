@@ -12,7 +12,6 @@ if(! is.null(prodname_filter)){
 # In the future when we want to get all small usgs sites, this could be changed
 usgs_sites <- c('black_earth_creek' = '05406457')
 
-# i=1
 for(i in seq_len(nrow(prod_info))){
 
     prodname_ms <<- glue(prod_info$prodname[i], '__', prod_info$prodcode[i])
@@ -26,7 +25,6 @@ for(i in seq_len(nrow(prod_info))){
 
     usgs_code <- get_usgs_codes(prodname_ms = prodname_ms)
 
-    # j=1
     for(j in 1:length(usgs_sites)){
 
         site_code <- names(usgs_sites[j])

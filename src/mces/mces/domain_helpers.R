@@ -51,15 +51,15 @@ mces_site_lookup <- function(site_string) {
 # NOTE: "low" "low L" ?
 
 mces_variable_info <- list(
-      "Total Kjeldahl Nitrogen, Filtered"      = c('mg/L', 'mg/L', 'TKN'),
-      "Total Kjeldahl Nitrogen, Unfiltered"    = c('mg/L', 'mg/L', 'UTKN'),
+      "Total Kjeldahl Nitrogen, Filtered"      = c('mg/L', 'mg/L', 'TDKN'),
+      "Total Kjeldahl Nitrogen, Unfiltered"    = c('mg/L', 'mg/L', 'TKN'),
       "Volatile Suspended Solids"              = c('mg/L', 'mg/L', 'VSS'),
       "Total Phosphorus, Filtered"             = c('mg/l', 'mg/l', 'TDP'),
       "Total Organic Carbon, Filtered"         = c('mg/L', 'mg/L', 'TOC'),
       "Total Organic Carbon, Unfiltered"       = c('mg/L', 'mg/L', 'TOC'),
       ## "Turbidity (FNU)"                        = c('FNU', 'FNU', 'turb'),
-      "Ortho Phosphate as P, Filtered"         = c('mg/l', 'mg/l', 'PO4_P'),
-      "Ortho Phosphate as P, Unfiltered"       = c('mg/L', 'mg/L', 'PO4_P'), # NOTE: ortho vs multiphosphate
+      "Ortho Phosphate as P, Filtered"         = c('mg/l', 'mg/l', 'orthophosphate_P'),
+      "Ortho Phosphate as P, Unfiltered"       = c('mg/L', 'mg/L', 'orthophosphate_P'), # NOTE: ortho vs multiphosphate
       ## "Chlorophyll-a, % Pheo-Corrected"        = c('', 'mg/l', ''),
       ## "Chlorophyll-a/Pheophytin-a Abs. R"      = c('', 'mg/l', ''),
       ## "Chlorophyll-a Trichromatic Uncorrected" = c('', 'mg/L', 'Chla'),
@@ -69,7 +69,7 @@ mces_variable_info <- list(
       ## "Pheophytin-a"                           = c('', '', ''),# TODO: add to variables
       "E. Coli Bacteria Count"                 = c('#/100mL', '#/mL', 'Ecoli'),
       "Fecal Coliform Bacteria Count"          = c('#/100mL', '#/mL', 'fecal_coliform'),
-      "Total Phosphorus, Unfiltered"           = c('mg/L', 'mg/L', 'UTP'),
+      "Total Phosphorus, Unfiltered"           = c('mg/L', 'mg/L', 'TP'),
       "Total Phosphorus, Particulate"          = c('mg/L', 'mg/L', 'TPP'),
       ## "Total Phosphorus, Filtered, Low L"      = c('mg/L', 'mg/L', 'TDP'),
       "Ammonia Nitrogen, Filtered"             = c('mg/L', 'mg/L', 'NH3_N'),

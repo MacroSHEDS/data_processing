@@ -1,4 +1,7 @@
 attributeName	code	definition
 var_category	discharge	Stream discharge
 var_category	precip_chemistry	Precipitation chemistry
+var_category	precip_flux_inst_scaled	Daily precipitation flux, scaled by watershed area, reported in kg/ha/d.
+var_category	precipitation	Precipitation depth
 var_category	stream_chemistry	Stream chemistry
+var_category	stream_flux_inst_scaled	Daily stream flux, scaled by watershed area, reported in kg/ha/d.

@@ -1,20 +1,18 @@
+warning('in 2025, need to address site arctic: "I-Minus_2_TK_High Side". systemic. adjusted in site data but not elsewhere')
+warning('gee now requires the use of a "cloud project". see starred email from 9/16/24 for setup deets')
+warning('the grab_sample column in each timeseries dataset AND the ms_recommended column in annual load need to be converted to numeric. this currently happens downstream of the split between packageversion and eml version. ugly')
 suppressPackageStartupMessages({
 
 
     # #spatial packages
     library(terra)  #must load before gstat package (which isn't currently needed)
-    # # library(gstat) #must load before raster package (not needed)
-    # library(raster)
-    # # library(stars) #not needed (yet)
     library(sf) #must load here in order to look for sf::sf_use_s2 (below)
-    # library(sp)
-    # library(mapview)
-    # library(elevatr)
-    # library(rgee) #requires system installation of gcloud (https://cloud.google.com/sdk/docs/install)
-    #also requires geojsonio
     # remotes::install_github("giswqs/whiteboxR")
-    # library(whitebox)
+    #might need the following if you can't get whitebox to install. build from source and
+    #   reference the executable like so
+    # whitebox::wbt_init(exe_path = '~/git/others_projects/whitebox-tools/target/release/whitebox_tools')
     library(nhdplusTools)
+    # library(streamstats)
 
     #everything else
     library(httr)
@@ -39,24 +37,22 @@ suppressPackageStartupMessages({
     library(doFuture)
     library(googlesheets4)
     library(googledrive)
-    library(rgee) #requires geojsonio package
+    library(rgee) #requires geojsonio package and system installation of gcloud (https://cloud.google.com/sdk/docs/install)
     library(osmdata)
     library(RCurl)
     library(rvest)
-    # library(streamstats)
+    library(macrosheds)
 
     # install.packages("BiocManager") #required to get the IRanges package
     # BiocManager::install("IRanges") #required for fuzzyjoin::difference_inner_join
     # library(fuzzyjoin) #nvm. too memory inefficient. implementing rolling join
     #   from data.table instead
-
-    #other stuff we need when R updates
-    # install.packages('geojsonio')
 })
 
 #set the dataset version. This is used to name the output dataset and diagnostic
 #plots. it will eventually be set automatically at the start of each run.
-#(or after each run that results in a change). Starting in 2015, use decimal versioning.
+#(or after each run that results in a change). Starting in 2025, use decimal versioning?
+#how would that work with EDI? maybe not.
 vsn <- 2
 
 options(dplyr.summarise.inform = FALSE,
@@ -319,13 +315,15 @@ ms_globals <- c(ls(all.names = TRUE), 'ms_globals')
 
 dir.create('logs', showWarnings = FALSE)
 
+run_prechecks()
+
 ## change string in line below to find row index of your desired domain
-dmnrow <- which(network_domain$domain == 'loch_vale') #uncomment, run, recomment
+dmnrow <- which(network_domain$domain == 'east_river')
 
 for(dmnrow in 1:nrow(network_domain)){
 
     # drop_automated_entries('.') #use with caution!
-    # drop_automated_entries(glue('data/{n}/{d}', n = network, d = domain))
+    # drop_automated_entries(glue('data/{network}/{domain}'))
 
     network <- network_domain$network[dmnrow]
     domain <- network_domain$domain[dmnrow]
@@ -333,6 +331,7 @@ for(dmnrow in 1:nrow(network_domain)){
     held_data <- get_data_tracker(network, domain)
 
     ## dangerous lines - use at your own risk!    :0
+
     # held_data = invalidate_tracked_data(network, domain, 'munge')
     # owrite_tracker(network, domain)
     # held_data = invalidate_tracked_data(network, domain, 'derive')
@@ -340,10 +339,9 @@ for(dmnrow in 1:nrow(network_domain)){
 
     ## less dangerous version below, clears tracker for just a specified product
 
-    # held_data = invalidate_tracked_data(network, domain, 'munge', 'stream_chemistry')
+    # held_data = invalidate_tracked_data(network, domain, 'munge', 'discharge')
     # owrite_tracker(network, domain)
-
-    # held_data = invalidate_tracked_data(network, domain, 'derive', 'stream_flux_inst')
+    # held_data = invalidate_tracked_data(network, domain, 'derive', 'CUSTOMprecipitation')
     # owrite_tracker(network, domain)
 
     logger_module <- set_up_logger(network = network,
@@ -364,33 +362,52 @@ for(dmnrow in 1:nrow(network_domain)){
 
     # stop here and go to processing_kernels.R to continue
     ms_retrieve(network = network,
-                # prodname_filter = c('stream_chemistry'),
+                # prodname_filter = c('precipitation'),
                 domain = domain)
 
-    check_for_derelicts(network = network,
-                        domain = domain)
+    if(domain != 'neon'){
+        check_for_derelicts(network = network,
+                            domain = domain)
+    }
 
     ms_munge(network = network,
-             # prodname_filter = c('stream_chemistry'),
+             # prodname_filter = c('discharge'),
              domain = domain)
 
-    if(domain != 'mcmurdo'){
+    #build this into ms_delineate and add a new parameter for it.
+    #(only useful when rerunning stuff after a fix. otherwise just delineate them all.)
+    has_wsbound = get_product_info(network = network,
+                     domain = domain,
+                     status_level = 'munge',
+                     get_statuses = 'ready') %>% pull(prodname) %>% str_detect('ws_boundary') %>% any()
+    if(domain != 'mcmurdo' && has_wsbound){
+        #might have to specify locatoin to whitebox executable:
+        # whitebox::wbt_init(exe_path = '~/git/others_projects/whitebox-tools/target/release/whitebox_tools')
         sw(ms_delineate(network = network,
                         domain = domain,
                         dev_machine_status = ms_instance$machine_status,
-                        # overwrite_wb_sites = "trout_river",
+                        # overwrite_wb_sites = c('CJ'),
                         verbose = FALSE))
     }
 
     ms_derive(network = network,
-              # prodname_filter = c('stream_flux_inst'),
-              domain = domain)
+              # prodname_filter = c('CUSTOMprecip_flux_inst'),
+              domain = domain,
+              precip_pchem_pflux_skip_existing = FALSE)
 
+    #these domains are either widely dispersed, or have both very small (10e1-2) and very large (10e5-6+) sites
+    #this might serve better as a domain-prod filter, but also it might not hurt to treat non_bulk_domains the same way for all prods
+    #might want to rerun these in full in 2025
+    non_bulk_domains <- c('neon', 'baltimore', 'catalina_jemez', 'east_river', 'bonanza', 'shale_hills', #high variation (many)
+                          'hjandrews', 'hbef', 'niwot', 'calhoun', 'liquillo') #really small watersheds (tcw)
     if(domain != 'mcmurdo'){
+        # whitebox::wbt_init(exe_path = '~/git/others_projects/whitebox-tools/target/release/whitebox_tools')
         ms_general(network = network,
                    domain = domain,
-                   get_missing_only = TRUE,
-                   general_prod_filter = NULL)
+                   get_missing_only = F,
+                   general_prod_filter = c('gpp_global_500m', 'npp_global_500m', 'evi'),
+                   bulk_mode = F) #seems reasonable to require this next year
+                   # bulk_mode = ifelse(domain %in% non_bulk_domains, FALSE, TRUE)) #daymet is always in bulk mode.
     }
 
     retain_ms_globals(ms_globals)
@@ -398,13 +415,13 @@ for(dmnrow in 1:nrow(network_domain)){
 
 logger_module <- 'ms.module'
 
+run_postchecks()
+# remove_superfluous_files('data') #uncomment and run
+# remove_superfluous_files('../portal/data') #uncomment and run
+
 #use this e.g. if someone else ran (part of) the loop above and you downloaded its output
 # rebuild_portal_data_before_postprocessing(network_domain = network_domain,
 #                                           backup = TRUE)
-
-# network_domain_backup <- network_domain
-# network_domain <- network_domain %>%
-#   filter(domain %in% c('loch_vale'))
 
 postprocess_entire_dataset(site_data = site_data,
                            network_domain = network_domain,
@@ -412,7 +429,7 @@ postprocess_entire_dataset(site_data = site_data,
                            thin_portal_data_to_interval = NA, # '1 day',
                            populate_implicit_missing_values = TRUE,
                            generate_csv_for_each_product = FALSE,
-                           push_new_version_to_figshare = FALSE)
+                           push_new_version_to_figshare_and_edi = FALSE)
 
 if(length(email_err_msgs)){
     email_err(msgs = email_err_msgs,

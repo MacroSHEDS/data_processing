@@ -63,7 +63,6 @@ for(i in seq_len(nrow(prod_info))){
         } else {
             loginfo(glue('Retrieving {s} {p}',
                          s=site_code, p=prodname_ms), logger=logger_module)
-            browser()
         }
 
         update_data_tracker_r(network=network, domain=domain, tracker=held_data)

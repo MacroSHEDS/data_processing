@@ -10,8 +10,8 @@
 #            val = errors::drop_errors(val),
 #            val = scale(val))
 
-q_interp_limit = 5 #240
-p_interp_limit = 5
+q_interp_limit = 1 #240
+p_interp_limit = 1
 # chem_interp_limit = 1 #not yet in use
 flux_interp_limit = 14 #240
 
@@ -23,6 +23,10 @@ library(viridis)
 ws_areas <- site_data %>%
     filter(as.logical(in_workflow)) %>%
     select(network, domain, site_code, ws_area_ha)
+site_dom <- site_data %>%
+    filter(as.logical(in_workflow),
+           site_type == 'stream_gauge') %>%
+    select(domain, site_code)
 
 pals = c('Blues', 'Greens', 'Greys', 'Reds', 'Purples',
          'PuRd', 'YlOrBr', 'OrRd', 'Oranges', 'YlGnBu')
@@ -176,7 +180,7 @@ dir.create(paste0('plots/diagnostic_plots_',  vsn), recursive = TRUE,
 
 # Q by domain (line plots stitched, log Y) ####
 
-seasonal_Q <- c('boulder', 'east_river', 'krycklan', 'arctic', 'bonanza', 'niwot')
+seasonal_Q <- c('boulder', 'east_river', 'krycklan', 'arctic', 'bonanza', 'niwot', 'loch_vale')
 q_dirs <- list_all_product_dirs('discharge',
                                 location = 'data_acquisition')
 log_ticks = c(0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000, 10000)
@@ -185,7 +189,7 @@ pdf(width=11, height=9, onefile=TRUE,
     file=paste0('plots/diagnostic_plots_',  vsn, '/Q_by_domain_interp',
                 q_interp_limit, '.pdf'))
 
-yr_seq = 1948:2021
+yr_seq = 1948:2023
 linetypes = 1:6
 log_ticks = c(0.0001, 0.001, 0.01, 0.1, 1, 10, 100, 1000, 10000)
 
@@ -242,7 +246,7 @@ for(i in 1:length(q_dirs)){
                   .groups = 'drop') %>%
         # arrange(site_code, year) %>%
         mutate(network = ntw_dmn_prd[1],
-               domain = ntw_dmn_prd[2]) 
+               domain = ntw_dmn_prd[2])
 
     if(ntw_dmn_prd[2] %in% seasonal_Q){
         d <- d %>%
@@ -366,7 +370,7 @@ for(i in 1:length(chemvars)){
     } else {
         d = load_product('stream_chemistry', filter_vars=chemvar)
     }
-    
+
     # d <- d %>%
     #     filter(site_code %in% !!stream_gauges)
 
@@ -382,7 +386,7 @@ for(i in 1:length(chemvars)){
         filter(n > 30)
 
     site_order = d_by_max$ntw_dmn_sit[order(d_by_max$medianval)]
-    
+
     sites_with_data <- d_by_max$site_code
 
     d_boxplot = d %>%
@@ -923,13 +927,16 @@ dev.off()
 pdf(width=11, height=9, onefile=TRUE,
     file=paste0('plots/diagnostic_plots_',  vsn, '/Q_coverage.pdf'))
 
-q = load_product('discharge')
+q = ms_load_product('macrosheds_figshare_v2/macrosheds_files_by_domain',
+                    'discharge', warn = FALSE) %>%
+    left_join(site_dom, by = 'site_code')
+
 dmns = unique(q$domain)
 current_year = lubridate::year(Sys.Date())
 
 for(dmn in dmns){
 
-    earliest_year = lubridate::year(min(q$datetime[q$domain == dmn]))
+    earliest_year = lubridate::year(min(q$date[q$domain == dmn]))
     nyears = current_year - earliest_year
     yrcols = viridis(n = nyears)
 
@@ -951,17 +958,17 @@ for(dmn in dmns){
 
         qsub = q %>%
             filter(domain == dmn, site_code == s) %>%
-            mutate(doy = as.numeric(strftime(datetime, format = '%j', tz='UTC')),
-                   yr_offset = lubridate::year(datetime) - earliest_year)
+            mutate(doy = as.numeric(strftime(date, format = '%j', tz='UTC')),
+                   yr_offset = lubridate::year(date) - earliest_year)
 
-        lubridate::year(qsub$datetime) <- 1972
+        lubridate::year(qsub$date) <- 1972
         yrs = unique(qsub$yr_offset)
 
         for(i in 1:length(yrs)){
             qss = qsub %>%
                 filter(yr_offset == yrs[i]) %>%
                 arrange(doy)
-            lines(qss$doy, c(scale(drop_errors(qss$val))) + qss$yr_offset, col=yrcols[i])
+            lines(qss$doy, c(scale(qss$val)) + qss$yr_offset, col=yrcols[i])
         }
 
         mtext(s, 3, outer=FALSE, line=-2)
@@ -1107,7 +1114,7 @@ ignore_vars <- c('NO3_NO2_N', 'NH4_NH3_N', 'PON', 'POC', 'TIP', 'TIN',
                  'Ho', 'Gd157', 'Eu', 'Er', 'Dy', 'Cr', 'Co', 'Ce', 'Be', 'Ba',
                  'B', 'As', 'Ag', 'Tc', 'NO2', 'H', 'Hf', 'Ga', 'Nb', 'Bi',
                  'Au', 'Nd145', 'NH3_N', 'TC', 'Gd', 'Hg', 'I', 'S', 'Al_ICP',
-                 'OMAl', 'TMAl', 'TIC', 'SRP')
+                 'OMAl', 'TMAl', 'TIC', 'orthophosphate_P')
 
 load_entire_product <- function(macrosheds_root,
                                 prodname,
@@ -1283,7 +1290,7 @@ ignore_vars <- c('NO3_NO2_N', 'NH4_NH3_N', 'PON', 'POC', 'TIP', 'TIN',
                  'Ho', 'Gd157', 'Eu', 'Er', 'Dy', 'Cr', 'Co', 'Ce', 'Be', 'Ba',
                  'B', 'As', 'Ag', 'Tc', 'NO2', 'H', 'Hf', 'Ga', 'Nb', 'Bi',
                  'Au', 'Nd145', 'NH3_N', 'TC', 'Gd', 'Hg', 'I', 'S', 'Al_ICP',
-                 'OMAl', 'TMAl', 'TIC', 'SRP')
+                 'OMAl', 'TMAl', 'TIC', 'orthophosphate_P')
 
 load_entire_product <- function(macrosheds_root,
                                 prodname,

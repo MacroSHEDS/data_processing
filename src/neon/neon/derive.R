@@ -21,7 +21,7 @@ for(i in seq_len(nrow(prod_info))){
     held_data <<- get_data_tracker(network = network,
                                    domain = domain)
 
-    if(! product_is_tracked(held_data,prodname_ms)){
+    if(! product_is_tracked(held_data, prodname_ms)){
 
         if(is_ms_prodcode(prodcode_from_prodname_ms(prodname_ms))){
 

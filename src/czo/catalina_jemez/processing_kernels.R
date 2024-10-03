@@ -197,7 +197,7 @@ process_0_2425 <- function(set_details, network, domain) {
 
 #discharge: STATUS=READY
 #. handle_errors
-process_1_2504 <- function(network, domain, prodname_ms, site_code, component) {
+process_1_2504 <- function(network, domain, prodname_ms, site_code, component){
 
     #CZO Site: https://czo-archive.criticalzone.org/catalina-jemez/data/dataset/2504/
     #Hydroshare: https://www.hydroshare.org/resource/c0e5094d1de54547a304d4dec3a7b3ff/
@@ -205,6 +205,7 @@ process_1_2504 <- function(network, domain, prodname_ms, site_code, component) {
     if(component %in% c('Jemez_Methods.csv', 'Jemez_Sites.csv')) {
         return(NULL)
     }
+
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
                     n = network,
                     d = domain,
@@ -214,23 +215,24 @@ process_1_2504 <- function(network, domain, prodname_ms, site_code, component) {
 
     d <- read.csv(rawfile, colClasses = 'character')
 
-    if(!grepl('MCZOB', component)) {
+    if(! grepl('MCZOB', component)){
 
         col_names <- names(d)
-        site_code_cols <- col_names[!grepl('DateTime|time', col_names)]
+        site_code_cols <- col_names[! grepl('DateTime|time', col_names)]
         datetime_col <- col_names[grepl('DateTime|time', col_names)]
 
         d <- d %>%
+            as_tibble() %>%
             pivot_longer(cols = site_code_cols, names_to = 'sites', values_to = 'discharge') %>%
             filter(discharge != '[cfs]') %>%
-            mutate(time = str_split_fixed(.data[[datetime_col]], ' ', n = Inf)[,2]) %>%
+            mutate(time = str_split_fixed(.data[[datetime_col]], ' ', n = Inf)[, 2]) %>%
             mutate(time = ifelse(nchar(time) == 4, paste0('0', time), time)) %>%
-            mutate(date = str_split_fixed(.data[[datetime_col]], ' ', n = Inf)[,1])
+            mutate(date = str_split_fixed(.data[[datetime_col]], ' ', n = Inf)[, 1])
 
         d <- ms_read_raw_csv(preprocessed_tibble = d,
-                             datetime_cols = list('date' = '%m/%e/%Y',
-                                                  'time' = '%H:%M'),
-                             datetime_tz = 'US/Mountain',
+                             datetime_cols = c('date' = '%m/%e/%Y',
+                                               'time' = '%H:%M'),
+                             datetime_tz = 'Etc/GMT+7',
                              site_code_col = 'sites',
                              data_cols =  'discharge',
                              data_col_pattern = '#V#',
@@ -238,9 +240,10 @@ process_1_2504 <- function(network, domain, prodname_ms, site_code, component) {
                              is_sensor = TRUE,
                              sampling_type = 'I')
 
-    } else{
+    } else {
 
         d <- d %>%
+            as_tibble() %>%
             filter(Streamflow != 'cfs') %>%
             mutate(time = str_split_fixed(datetime, ' ', n = Inf)[,2]) %>%
             mutate(time = ifelse(nchar(time) == 4, paste0('0', time), time)) %>%
@@ -248,9 +251,9 @@ process_1_2504 <- function(network, domain, prodname_ms, site_code, component) {
             mutate(site = 'FLUME_MCZOB')
 
         d <- ms_read_raw_csv(preprocessed_tibble = d,
-                             datetime_cols = list('date' = '%m/%e/%Y',
-                                                  'time' = '%H:%M'),
-                             datetime_tz = 'US/Mountain',
+                             datetime_cols = c('date' = '%m/%e/%Y',
+                                               'time' = '%H:%M'),
+                             datetime_tz = 'Etc/GMT+7',
                              site_code_col = 'site',
                              data_cols =  c('Streamflow' = 'discharge'),
                              data_col_pattern = '#V#',
@@ -259,12 +262,10 @@ process_1_2504 <- function(network, domain, prodname_ms, site_code, component) {
                              sampling_type = 'I')
     }
 
-    d <- ms_cast_and_reflag(d,
-                            varflag_col_pattern = NA)
+    d <- ms_cast_and_reflag(d, varflag_col_pattern = NA)
 
     #cubic feet to liters
-    d <- d %>%
-        mutate(val = val*28.317)
+    d <- mutate(d, val = val * 28.317)
 
     d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
@@ -273,7 +274,7 @@ process_1_2504 <- function(network, domain, prodname_ms, site_code, component) {
 
 #discharge; stream_chemistry: STATUS=READY
 #. handle_errors
-process_1_6686 <- function(network, domain, prodname_ms, site_code, component) {
+process_1_6686 <- function(network, domain, prodname_ms, site_code, component){
 
     #https://czo-archive.criticalzone.org/catalina-jemez/data/dataset/6686/
     #https://www.hydroshare.org/resource/7703d249f062428b8229c03ce072e5c6/
@@ -298,9 +299,9 @@ process_1_6686 <- function(network, domain, prodname_ms, site_code, component) {
     if(grepl('discharge', prodname_ms)){
 
         d <- ms_read_raw_csv(preprocessed_tibble = d,
-                             datetime_cols = list('date' = '%m/%e/%Y',
+                             datetime_cols = c('date' = '%m/%e/%Y',
                                                   'time' = '%H:%M'),
-                             datetime_tz = 'US/Mountain',
+                             datetime_tz = 'Etc/GMT+7',
                              site_code_col = 'site',
                              data_cols =  c('StreamFlow' = 'discharge'),
                              data_col_pattern = '#V#',
@@ -316,12 +317,12 @@ process_1_6686 <- function(network, domain, prodname_ms, site_code, component) {
 
         return(d)
 
-    } else{
+    } else {
 
         d <- ms_read_raw_csv(preprocessed_tibble = d,
-                             datetime_cols = list('date' = '%m/%e/%Y',
+                             datetime_cols = c('date' = '%m/%e/%Y',
                                                   'time' = '%H:%M'),
-                             datetime_tz = 'US/Mountain',
+                             datetime_tz = 'Etc/GMT+7',
                              site_code_col = 'site',
                              data_cols =  c('WaterTemp' = 'temp'),
                              data_col_pattern = '#V#',
@@ -341,7 +342,7 @@ process_1_6686 <- function(network, domain, prodname_ms, site_code, component) {
 
 #discharge: STATUS=READY
 #. handle_errors
-process_1_2644 <- function(network, domain, prodname_ms, site_code, component) {
+process_1_2644 <- function(network, domain, prodname_ms, site_code, component){
 
     #https://czo-archive.criticalzone.org/catalina-jemez/data/dataset/2644/
     #https://www.hydroshare.org/resource/3c1fd54381764e5b8865609cb4127d63/
@@ -359,8 +360,8 @@ process_1_2644 <- function(network, domain, prodname_ms, site_code, component) {
 
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('DateTime' = '%m/%e/%Y %H:%M'),
-                         datetime_tz = 'US/Mountain',
+                         datetime_cols = c('DateTime' = '%m/%e/%Y %H:%M'),
+                         datetime_tz = 'Etc/GMT+7',
                          site_code_col = 'site',
                          data_cols =  c('StreamFlow' = 'discharge'),
                          data_col_pattern = '#V#',
@@ -378,7 +379,7 @@ process_1_2644 <- function(network, domain, prodname_ms, site_code, component) {
 
 #discharge; stream_chemistry: STATUS=READY
 #. handle_errors
-process_1_2497 <- function(network, domain, prodname_ms, site_code, component) {
+process_1_2497 <- function(network, domain, prodname_ms, site_code, component){
 
     #https://czo-archive.criticalzone.org/catalina-jemez/data/dataset/2497/
     #https://www.hydroshare.org/resource/9d7dd6ca40984607ad74a00ab0b5121b/
@@ -397,8 +398,8 @@ process_1_2497 <- function(network, domain, prodname_ms, site_code, component) {
     if(grepl('stream_chemistry', prodname_ms)) {
 
         d <- ms_read_raw_csv(preprocessed_tibble = d,
-                             datetime_cols = list('DateTime' = '%m/%e/%Y %H:%M'),
-                             datetime_tz = 'US/Mountain',
+                             datetime_cols = c('DateTime' = '%m/%e/%Y %H:%M'),
+                             datetime_tz = 'Etc/GMT+7',
                              site_code_col = 'site',
                              data_cols =  c('Temp' = 'temp'),
                              data_col_pattern = '#V#',
@@ -409,8 +410,8 @@ process_1_2497 <- function(network, domain, prodname_ms, site_code, component) {
     } else{
 
         d <- ms_read_raw_csv(preprocessed_tibble = d,
-                             datetime_cols = list('DateTime' = '%m/%e/%Y %H:%M'),
-                             datetime_tz = 'US/Mountain',
+                             datetime_cols = c('DateTime' = '%m/%e/%Y %H:%M'),
+                             datetime_tz = 'Etc/GMT+7',
                              site_code_col = 'site',
                              data_cols =  c('Flow' = 'discharge'),
                              data_col_pattern = '#V#',
@@ -429,7 +430,7 @@ process_1_2497 <- function(network, domain, prodname_ms, site_code, component) {
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
-process_1_4135 <- function(network, domain, prodname_ms, site_code, component) {
+process_1_4135 <- function(network, domain, prodname_ms, site_code, component){
 
     # CZO Site: https://czo-archive.criticalzone.org/catalina-jemez/data/dataset/4135/
     # Hydroshare: https://www.hydroshare.org/resource/553c42d3a8ee40309b2d77071aa25f2e/
@@ -444,110 +445,117 @@ process_1_4135 <- function(network, domain, prodname_ms, site_code, component) {
     d <- read.csv(rawfile, colClasses = 'character')
 
     col_names <- colnames(d)
-    units <- as.character(d[1,])
-
-    names(units) <- col_names
-    units <- units[! grepl(paste(c('DateTime', 'SiteCode', 'SampleCode', 'Sampling',
-                                   'Method', 'SampleType', 'SampleMedium', 'pH',
-                                   'ph.1','Temp', 'FI', 'HIX', 'SUVA', 'SamplingNote',
-                                   'd13C.DIC', 'dD', 'd18O', 'EC', 'DO', 'Alkalinity',
-                                   'UVA254'),
-                                 collapse = '|'), col_names)]
-
-    units <- units[! grepl('mg/L', units)]
+    units <- as.character(d[1, ])
 
     d <- d %>%
+        as_tibble() %>%
         mutate(SiteCode = str_replace_all(SiteCode, '[/]', '_')) %>%
         filter(! SiteCode %in% c('missing2', 'missing1', ''))
 
-    col_names_to_vars <- c('pH', 'Temp' = 'temp', 'EC' = 'spCond',
-                           'TIC', 'TOC', 'TN', 'F', 'Cl', 'NO2',
-                           'Br', 'NO3', 'SO4', 'PO4', 'Ca', 'Mg',
-                           'Na', 'K', 'Sr', 'Si28' = 'Si', 'B', 'Be9' = 'Be',
-                           'Al27' = 'Al', 'Ti49', 'V51' = 'V',
-                           'Cr52' = 'Cr', 'Mn55' = 'Mn', 'Fe56' = 'Fe',
-                           'Co59' = 'Co', 'Ni60', 'Cu63' = 'Cu',
-                           'Zn64' = 'Zn', 'As75' = 'As', 'Se78',
-                           'Y89' = 'Y', 'Mo98' = 'Mo', 'Ag107' = 'Ag',
-                           'Cd114' = 'Cd', 'Sn118', 'Sb121' = 'Sb',
-                           'Ba138' = 'Ba', 'La139' = 'La', 'Ce140' = 'Ce',
-                           'Pr141' = 'Pr', 'Nd145', 'Sm147',
-                           'Eu153' = 'Eu', 'Gd157', 'Tb159' = 'Tb',
-                           'Dy164' = 'Dy', 'Ho165' = 'Ho', 'Er166' = 'Er',
-                           'Tm169' = 'Tm', 'Yb174' = 'Yb', 'Lu175' = 'Lu',
-                           'TI205' = 'Tl', 'Pb208' = 'Pb', 'U238' = 'U',
-                           'NH4.N' = 'NH4_N', 'Ca40' = 'Ca', 'Mg24' = 'Mg',
-                           'Na23' = 'Na', 'K39' = 'K', 'Sr88' = 'Sr', 'B11' = 'B',
-                           'F.' = 'F', 'Cl.' = 'Cl', 'NO2.' = 'NO2', 'Br.' = 'Br',
-                           'NO3.' = 'NO3', 'SO4.' = 'SO4', 'PO4.' = 'PO4',
-                           'Zr90' = 'Zr', 'Si', 'P31' = 'P', 'Ortho.P' = 'PO4_P',
-                           'Cd111' = 'Cd',
-                           'Ge74' = 'Ge', 'Nb93' = 'Nb', 'Tl205' = 'Tl', 'Fe',
-                           'Al', 'Ba', 'Hg202' = 'Hg')
+    ## standardize variable names
 
-    names(col_names_to_vars) <- ifelse(names(col_names_to_vars) == '', unname(col_names_to_vars),
-                                       names(col_names_to_vars))
+    priority <- rep(NA, ncol(d))
+    for(i in seq_along(col_names)){
 
-    col_names_to_vars <- col_names_to_vars[names(col_names_to_vars) %in% names(d)]
+        cn <- col_names[i]
+        ms_name <- purrr::keep(catalina_varname_priorities,  ~ cn %in% .x) %>%
+            names()
 
-    if(any(duplicated(unname(col_names_to_vars)))){
-        col_names_to_vars <- col_names_to_vars[!duplicated(unname(col_names_to_vars))]
+        if(! length(ms_name)) next
+
+        priority[i] <- which(catalina_varname_priorities[[ms_name]] == cn)
+        colnames(d)[i] <- ms_name
     }
 
-    #Most metals are reported as their isotope, not sure to keep istope form in
-    #varible name or change to just element.
-    d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('DateTime' = '%m/%e/%Y %H:%M'),
-                         datetime_tz = 'US/Mountain',
-                         site_code_col = 'SiteCode',
-                         alt_site_code = list('HistoryGrove' = c('FLUME_HG', 'FLUME_HG16', 'FLUME_HG_16'),
-                                              'LowerJaramillo' = 'FLUME_LJ',
-                                              'UpperJaramillo' = 'FLUME_UJ',
-                                              'LowerLaJara' = c('FLUME_LLJ', 'FLUME_LLJ16', 'FLUME_LLJ_16'),
-                                              'UpperRedondo' = 'FLUME_UR',
-                                              'RedondoMeadow' = 'FLUME_RM',
-                                              'UpperLaJara' = 'FLUME_ULJ',
-                                              'LowerRedondo' = 'FLUME_LR'),
-                         data_cols = col_names_to_vars,
-                         data_col_pattern = '#V#',
-                         set_to_NA = c('-9999.000', '-9999', '-999.9', '-999'),
-                         is_sensor = FALSE)
+    ## choose among equivalent variables
 
-    d <- ms_cast_and_reflag(d,
-                            varflag_col_pattern = NA)
+    col_names_new <- colnames(d)
+    dupers <- col_names_new[duplicated(col_names_new)]
+    drop_these <- c()
+    for(dup in dupers){
 
-    for(i in 1:length(units)){
-        new_name <- col_names_to_vars[names(units[i]) == names(col_names_to_vars)]
-
-        if(length(new_name) == 0) { next }
-
-        names(units)[i] <- unname(new_name)
+        dup_set <- which(col_names_new == dup)
+        keep_this_one <- which.min(priority[dup_set])
+        drop_these <- c(drop_these, dup_set[-keep_this_one])
     }
 
-    units <- units[names(units) %in% unname(col_names_to_vars)]
+    d <- select(d, ! drop_these)
+    if(length(drop_these)){
+        units <- units[-drop_these]
+        col_names_new <- col_names_new[-drop_these]
+    }
+    unit_names <- col_names_new
 
-    units <- tolower(units)
-    new_units_names <- names(units)
-    units <- str_replace_all(units, 'umoles/l', 'umol/l')
-    names(units) <- new_units_names
+    ## determine which units need to be converted
 
-    new_units <- rep('mg/l', length(units))
-    names(new_units) <- names(units)
+    nonconvert_units <- grepl(paste(units_to_ignore,
+                                    collapse = '|'),
+                              colnames(d))
 
-    d <- ms_conversions(d,
+    units <- units[! nonconvert_units]
+    unit_names <- unit_names[! nonconvert_units]
+
+    more_nonconverts <- grepl('mg/L', units)
+
+    units <- units[! more_nonconverts]
+    unit_names <- unit_names[! more_nonconverts]
+    names(units) <- unit_names
+
+    if(any(nchar(units) == 0 | is.na(units))){
+        message('unit problem')
+        browser()
+    }
+    if(any(! grepl('/L$', units))){
+        message('maybe unit problem')
+        browser()
+    }
+
+    ## back to normal
+
+    vars_encountered <- intersect(names(catalina_varname_priorities),
+                                  colnames(d))
+
+    d <- ms_read_raw_csv(
+        preprocessed_tibble = d,
+        datetime_cols = c('DateTime' = '%m/%e/%Y %H:%M'),
+        datetime_tz = 'Etc/GMT+7',
+        site_code_col = 'SiteCode',
+        alt_site_code = list('HistoryGrove' = c('FLUME_HG', 'FLUME_HG16', 'FLUME_HG_16'),
+                             'LowerJaramillo' = 'FLUME_LJ',
+                             'UpperJaramillo' = 'FLUME_UJ',
+                             'LowerLaJara' = c('FLUME_LLJ', 'FLUME_LLJ16', 'FLUME_LLJ_16'),
+                             'UpperRedondo' = 'FLUME_UR',
+                             'RedondoMeadow' = 'FLUME_RM',
+                             'UpperLaJara' = 'FLUME_ULJ',
+                             'LowerRedondo' = 'FLUME_LR'),
+        data_cols = vars_encountered,
+        data_col_pattern = '#V#',
+        set_to_NA = errorcode_variants,
+        is_sensor = FALSE
+    )
+
+    d <- ms_cast_and_reflag(d, varflag_col_pattern = NA)
+
+    new_units <- setNames(rep('mg/L',
+                              length(units)),
+                          names(units))
+
+    units <- sub('moles', 'mol', units)
+    d <- ms_conversions_(d,
                         convert_units_from = units,
                         convert_units_to = new_units)
 
     d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
-    #d <- synchronize_timestep(d)
+    #this happens in derive kernel for catalina
+    # d <- synchronize_timestep(d)
 
     return(d)
 }
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
-process_1_2740 <- function(network, domain, prodname_ms, site_code, component) {
+process_1_2740 <- function(network, domain, prodname_ms, site_code, component){
 
     #https://czo-archive.criticalzone.org/catalina-jemez/data/dataset/2740/
     #https://www.hydroshare.org/resource/3df05937abfc4cb59b8be04d674c4b48/
@@ -559,190 +567,109 @@ process_1_2740 <- function(network, domain, prodname_ms, site_code, component) {
                     s = site_code,
                     c = component)
 
-    # Could not identify units on isotopes
-    if(component == 'Isotopes_Stream_2006_2012.csv') {
-        return()
-    }
     d <- read.csv(rawfile, colClasses = 'character')
-
     col_names <- colnames(d)
-    units <- as.character(d[1,])
-
-    names(units) <- col_names
-    units <- units[! grepl(paste(c('DateTime', 'SiteCode', 'SampleCode', 'Sampling',
-                                   'Method', 'SampleType', 'SampleMedium', 'pH',
-                                   'ph.1','Temp', 'FI', 'HIX', 'SUVA', 'SamplingNote',
-                                   'd13C.DIC', 'dD', 'd18O', 'EC', 'DO', 'Alkalinity',
-                                   'UVA254'),
-                                 collapse = '|'), col_names)]
-
-    units <- units[! grepl('mg/L|(mg/L)', units)]
+    units <- as.character(d[1, ])
 
     d <- d %>%
+        as_tibble() %>%
         mutate(SiteCode = str_replace_all(SiteCode, '[/]', '_')) %>%
-        filter(! SiteCode %in% c('missing2', 'missing1', ''))
+        filter(! SiteCode %in% c('missing2', 'missing1', '', '-'))
 
-    col_names_to_vars <- c('pH', 'EC' = 'spCond', 'TIC', 'TOC', 'TN',
-                           'F.' = 'F', 'Cl.' = 'Cl', 'NO2.' = 'NO2',
-                           'NO3.' = 'NO3', 'SO4', 'PO4', 'Na23' = 'Na',
-                           'Mg24' = 'Mg', 'Al27' = 'Al', 'Si28' = 'Si',
-                           'K39' = 'K', 'Ca40' = 'Ca', 'Cr52' = 'Cr',
-                           'Mn55' = 'Mn', 'Fe56' = 'Fe', 'Co59' = 'Co',
-                           'Ni60' = 'Ni', 'Cu63' = 'Cu', 'Zn64' = 'Zn',
-                           'Y89' = 'Y', 'Cd111' = 'Cd', 'La139' = 'La',
-                           'Ce140' = 'Ce', 'Pr141' = 'Pr', 'Nd145',
-                           'Sm147', 'Eu153' = 'Eu', 'Gd157',
-                           'Tb159' = 'Tb', 'Dy164' = 'Dy', 'Ho165' = 'Ho',
-                           'Er166' = 'Er', 'Tm169' = 'Tm', 'Yb174' = 'Yb',
-                           'Lu175' = 'Lu', 'Pb208' = 'Pb', 'U238' = 'U',
-                           'NH4.N' = 'NH4_N', 'Ortho.P' = 'PO4_P',
-                           'SUVA254' = 'abs254', 'SUVA280' = 'abs280')
+    ## standardize variable names
 
-    names(col_names_to_vars) <- ifelse(names(col_names_to_vars) == '', unname(col_names_to_vars),
-                                       names(col_names_to_vars))
+    priority <- rep(NA, ncol(d))
+    for(i in seq_along(col_names)){
 
-    col_names_to_vars <- col_names_to_vars[names(col_names_to_vars) %in% names(d)]
+        cn <- col_names[i]
+        ms_name <- purrr::keep(catalina_varname_priorities,  ~ cn %in% .x) %>%
+            names()
 
-    if(any(duplicated(unname(col_names_to_vars)))){
-        col_names_to_vars <- col_names_to_vars[!duplicated(unname(col_names_to_vars))]
+        if(! length(ms_name)) next
+
+        priority[i] <- which(catalina_varname_priorities[[ms_name]] == cn)
+        colnames(d)[i] <- ms_name
     }
 
+    ## choose among equivalent variables
 
+    col_names_new <- colnames(d)
+    dupers <- col_names_new[duplicated(col_names_new)]
+    drop_these <- c()
+    for(dup in dupers){
 
-    # rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
-    #                 n = network,
-    #                 d = domain,
-    #                 p = prodname_ms,
-    #                 s = site_code,
-    #                 c = component)
-    #
-    # d <- read.csv(rawfile, colClasses = 'character')
-    #
-    # if(! c('EC', 'TN', 'TOC') %in% colnames(d)){
-    #     return(NULL)
-    # }
+        dup_set <- which(col_names_new == dup)
+        keep_this_one <- which.min(priority[dup_set])
+        drop_these <- c(drop_these, dup_set[-keep_this_one])
+    }
+
+    d <- select(d, ! drop_these)
+    if(length(drop_these)){
+        units <- units[-drop_these]
+        col_names_new <- col_names_new[-drop_these]
+    }
+    unit_names <- col_names_new
+
+    ## determine which units need to be converted
+
+    nonconvert_units <- grepl(paste(units_to_ignore,
+                                    collapse = '|'),
+                              colnames(d))
+
+    units <- units[! nonconvert_units]
+    unit_names <- unit_names[! nonconvert_units]
+
+    more_nonconverts <- grepl('mg/L', units)
+
+    units <- units[! more_nonconverts]
+    unit_names <- unit_names[! more_nonconverts]
+    names(units) <- unit_names
+
+    if(any(nchar(units) == 0 | is.na(units))) stop('unit problem')
+    if(any(! grepl('/L$', units))) stop('maybe unit problem')
+
+    ## back to normal
+
+    vars_encountered <- intersect(names(catalina_varname_priorities),
+                                  colnames(d))
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('DateTime' = '%m/%e/%Y'),
-                         datetime_tz = 'US/Mountain',
+                         datetime_cols = c('DateTime' = '%m/%e/%Y'),
+                         datetime_tz = 'Etc/GMT+7',
                          site_code_col = 'SiteCode',
                          alt_site_code = list('MarshallGulch' = 'MG_WEIR',
                                               'OracleRidge' = 'OR_low',
                                               'Bigelow' = 'BGZOB_Flume'),
-                         data_cols =  col_names_to_vars,
+                         data_cols =  vars_encountered,
                          data_col_pattern = '#V#',
-                         set_to_NA = c('-9999.000', '-9999', '-999.9', '-999'),
+                         set_to_NA = errorcode_variants,
                          is_sensor = FALSE)
 
-    d <- ms_cast_and_reflag(d,
-                            varflag_col_pattern = NA)
+    d <- ms_cast_and_reflag(d, varflag_col_pattern = NA)
 
-    for(i in 1:length(units)){
-        new_name <- col_names_to_vars[names(units[i]) == names(col_names_to_vars)]
+    new_units <- setNames(rep('mg/L',
+                              length(units)),
+                          names(units))
 
-        if(length(new_name) == 0) { next }
+    units <- sub('moles', 'mol', units)
 
-        names(units)[i] <- unname(new_name)
+    if(length(units)){
+        d <- ms_conversions_(d,
+                            convert_units_from = units,
+                            convert_units_to = new_units)
     }
 
-    units <- units[names(units) %in% unname(col_names_to_vars)]
-
-    units <- tolower(units)
-    new_units_names <- names(units)
-    units <- str_replace_all(units, 'umoles/l', 'umol/l')
-    names(units) <- new_units_names
-
-    new_units <- rep('mg/l', length(units))
-    names(new_units) <- names(units)
-
-    d <- ms_conversions(d,
-                        convert_units_from = units,
-                        convert_units_to = new_units)
-
-    # d <- ms_conversions(d,
-    #                     convert_units_from = c('F' = 'umol/L',
-    #                                            'Cl' = 'umol/L',
-    #                                            'NO2' = 'umol/L',
-    #                                            'NO3' = 'umol/L',
-    #                                            'SO4' = 'umol/L',
-    #                                            'PO4' = 'umol/L',
-    #                                            'Na' = 'ug/L',
-    #                                            'Mg' = 'ug/L',
-    #                                            'Al' = 'ug/L',
-    #                                            'Si' = 'ug/L',
-    #                                            'K' = 'ug/L',
-    #                                            'Ca' = 'ug/L',
-    #                                            'Cr' = 'ug/L',
-    #                                            'Mn' = 'ug/L',
-    #                                            'Fe' = 'ug/L',
-    #                                            'Co' = 'ug/L',
-    #                                            'Ni' = 'ug/L',
-    #                                            'Cu' = 'ug/L',
-    #                                            'Zn' = 'ug/L',
-    #                                            'Y' = 'ng/L',
-    #                                            'Cd' = 'ug/L',
-    #                                            'La' = 'ng/L',
-    #                                            'Ce' = 'ng/L',
-    #                                            'Pr' = 'ng/L',
-    #                                            'Nd145' = 'ng/L',
-    #                                            'Sm147' = 'ng/L',
-    #                                            'Eu' = 'ng/L',
-    #                                            'Gd157' = 'ng/L',
-    #                                            'Tb' = 'ng/L',
-    #                                            'Dy' = 'ng/L',
-    #                                            'Ho' = 'ng/L',
-    #                                            'Er' = 'ng/L',
-    #                                            'Tm' = 'ng/L',
-    #                                            'Yb' = 'ng/L',
-    #                                            'Lu' = 'ng/L',
-    #                                            'Pb' = 'ng/L',
-    #                                            'U' = 'ng/L'),
-    #                     convert_units_to = c('F' = 'mg/L',
-    #                                          'Cl' = 'mg/L',
-    #                                          'NO2' = 'mg/L',
-    #                                          'NO3' = 'mg/L',
-    #                                          'SO4' = 'mg/L',
-    #                                          'PO4' = 'mg/L',
-    #                                          'Na' = 'mg/L',
-    #                                          'Mg' = 'mg/L',
-    #                                          'Al' = 'mg/L',
-    #                                          'Si' = 'mg/L',
-    #                                          'K' = 'mg/L',
-    #                                          'Ca' = 'mg/L',
-    #                                          'Cr' = 'mg/L',
-    #                                          'Mn' = 'mg/L',
-    #                                          'Fe' = 'mg/L',
-    #                                          'Co' = 'mg/L',
-    #                                          'Ni' = 'mg/L',
-    #                                          'Cu' = 'mg/L',
-    #                                          'Zn' = 'mg/L',
-    #                                          'Y' = 'mg/L',
-    #                                          'Cd' = 'mg/L',
-    #                                          'La' = 'mg/L',
-    #                                          'Ce' = 'mg/L',
-    #                                          'Pr' = 'mg/L',
-    #                                          'Nd145' = 'mg/L',
-    #                                          'Sm147' = 'mg/L',
-    #                                          'Eu' = 'mg/L',
-    #                                          'Gd157' = 'mg/L',
-    #                                          'Tb' = 'mg/L',
-    #                                          'Dy' = 'mg/L',
-    #                                          'Ho' = 'mg/L',
-    #                                          'Er' = 'mg/L',
-    #                                          'Tm' = 'mg/L',
-    #                                          'Yb' = 'mg/L',
-    #                                          'Lu' = 'mg/L',
-    #                                          'Pb' = 'mg/L',
-    #                                          'U' = 'mg/L'))
-
     d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
+
+    #this happens in derive kernel for catalina
+    # d <- synchronize_timestep(d)
 
     return(d)
 }
 
 #precipitation: STATUS=READY
 #. handle_errors
-process_1_2532 <- function(network, domain, prodname_ms, site_code, component) {
+process_1_2532 <- function(network, domain, prodname_ms, site_code, component){
 
     #https://czo-archive.criticalzone.org/catalina-jemez/data/dataset/2532/
     #https://www.hydroshare.org/resource/f5ae15fbdcc9425e847060f89da61557/
@@ -765,22 +692,21 @@ process_1_2532 <- function(network, domain, prodname_ms, site_code, component) {
         mutate(date = str_split_fixed(DateTime, ' ', n = Inf)[,1]) %>%
         filter(DateTime != 'MST')
 
-    #SRP same as Ortho-P?
-    #Most metals are reported as their isotope, not sure to keep istope form in
-    #varible name or change to just element.
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('date' = '%m/%e/%Y',
+                         datetime_cols = c('date' = '%m/%e/%Y',
                                               'time' = '%H:%M'),
-                         datetime_tz = 'US/Mountain',
+                         datetime_tz = 'Etc/GMT+7',
                          site_code_col = 'sites',
                          data_cols =  c('precip' = 'precipitation'),
                          data_col_pattern = '#V#',
                          set_to_NA = c('-9999.000', '-9999', '-999.9', '-999'),
                          is_sensor = TRUE,
-                         sampling_type = 'I')
+                         sampling_type = 'I',
+                         keep_empty_rows = TRUE)
 
     d <- ms_cast_and_reflag(d,
-                            varflag_col_pattern = NA)
+                            varflag_col_pattern = NA,
+                            keep_empty_rows = TRUE)
 
     d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
@@ -789,7 +715,7 @@ process_1_2532 <- function(network, domain, prodname_ms, site_code, component) {
 
 #precipitation: STATUS=READY
 #. handle_errors
-process_1_2491 <- function(network, domain, prodname_ms, site_code, component) {
+process_1_2491 <- function(network, domain, prodname_ms, site_code, component){
 
     #https://www.hydroshare.org/resource/346cf577d01e4b2b90ff1cef86e789bb/
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
@@ -807,18 +733,20 @@ process_1_2491 <- function(network, domain, prodname_ms, site_code, component) {
     }
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('DateTime' = '%m/%e/%Y %H:%M'),
-                         datetime_tz = 'US/Mountain',
+                         datetime_cols = c('DateTime' = '%m/%e/%Y %H:%M'),
+                         datetime_tz = 'Etc/GMT+7',
                          site_code_col = 'site',
                          data_cols =  c('Precipitation' = 'precipitation'),
                          data_col_pattern = '#V#',
                          set_to_NA = c('-9999.000', '-9999', '-999.9', '-999',
                                        '[mm]'),
                          is_sensor = TRUE,
-                         sampling_type = 'I')
+                         sampling_type = 'I',
+                         keep_empty_rows = TRUE)
 
     d <- ms_cast_and_reflag(d,
-                            varflag_col_pattern = NA)
+                            varflag_col_pattern = NA,
+                            keep_empty_rows = TRUE)
 
     d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
@@ -827,7 +755,7 @@ process_1_2491 <- function(network, domain, prodname_ms, site_code, component) {
 
 #precipitation: STATUS=READY
 #. handle_errors
-process_1_2494 <- function(network, domain, prodname_ms, site_code, component) {
+process_1_2494 <- function(network, domain, prodname_ms, site_code, component){
 
     #https://www.hydroshare.org/resource/1dc7b0975ae2469a96e3458075d3b75c/
 
@@ -846,18 +774,20 @@ process_1_2494 <- function(network, domain, prodname_ms, site_code, component) {
         mutate(site = 'Burn_Met_Up')
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('DateTime' = '%m/%e/%Y %H:%M'),
-                         datetime_tz = 'US/Mountain',
+                         datetime_cols = c('DateTime' = '%m/%e/%Y %H:%M'),
+                         datetime_tz = 'Etc/GMT+7',
                          site_code_col = 'site',
                          data_cols =  c('Precipitation' = 'precipitation'),
                          data_col_pattern = '#V#',
                          set_to_NA = c('-9999.000', '-9999', '-999.9', '-999',
                                        '[mm]'),
                          is_sensor = TRUE,
-                         sampling_type = 'I')
+                         sampling_type = 'I',
+                         keep_empty_rows = TRUE)
 
     d <- ms_cast_and_reflag(d,
-                            varflag_col_pattern = NA)
+                            varflag_col_pattern = NA,
+                            keep_empty_rows = TRUE)
 
     d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
@@ -866,7 +796,7 @@ process_1_2494 <- function(network, domain, prodname_ms, site_code, component) {
 
 #precipitation: STATUS=READY
 #. handle_errors
-process_1_2531 <- function(network, domain, prodname_ms, site_code, component) {
+process_1_2531 <- function(network, domain, prodname_ms, site_code, component){
 
     #https://czo-archive.criticalzone.org/catalina-jemez/data/dataset/2531/
     #https://www.hydroshare.org/resource/172de7fe091f48d98b1d380da5851932/
@@ -894,20 +824,20 @@ process_1_2531 <- function(network, domain, prodname_ms, site_code, component) {
         return(NULL)
     }
 
-    #SRP same as Ortho-P?
-    #varible name or change to just element.
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('DateTime' = '%m/%e/%Y %H:%M'),
-                         datetime_tz = 'US/Mountain',
+                         datetime_cols = c('DateTime' = '%m/%e/%Y %H:%M'),
+                         datetime_tz = 'Etc/GMT+7',
                          site_code_col = 'sites',
                          data_cols =  c('precip' = 'precipitation'),
                          data_col_pattern = '#V#',
                          set_to_NA = c('-9999.000', '-9999', '-999.9', '-999'),
                          is_sensor = TRUE,
-                         sampling_type = 'I')
+                         sampling_type = 'I',
+                         keep_empty_rows = TRUE)
 
     d <- ms_cast_and_reflag(d,
-                            varflag_col_pattern = NA)
+                            varflag_col_pattern = NA,
+                            keep_empty_rows = TRUE)
 
     d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
@@ -916,7 +846,7 @@ process_1_2531 <- function(network, domain, prodname_ms, site_code, component) {
 
 #precipitation: STATUS=READY
 #. handle_errors
-process_1_2475 <- function(network, domain, prodname_ms, site_code, component) {
+process_1_2475 <- function(network, domain, prodname_ms, site_code, component){
 
     #https://www.hydroshare.org/resource/0ba983afc62647dc8cfbd91058cfc56d/
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
@@ -939,17 +869,19 @@ process_1_2475 <- function(network, domain, prodname_ms, site_code, component) {
     }
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('DateTime' = '%m/%e/%Y %H:%M'),
-                         datetime_tz = 'US/Mountain',
+                         datetime_cols = c('DateTime' = '%m/%e/%Y %H:%M'),
+                         datetime_tz = 'Etc/GMT+7',
                          site_code_col = 'site',
                          data_cols =  c('Precipitation' = 'precipitation'),
                          data_col_pattern = '#V#',
                          set_to_NA = c('-9999.000', '-9999', '-999.9', '-999'),
                          is_sensor = TRUE,
-                         sampling_type = 'I')
+                         sampling_type = 'I',
+                         keep_empty_rows = TRUE)
 
     d <- ms_cast_and_reflag(d,
-                            varflag_col_pattern = NA)
+                            varflag_col_pattern = NA,
+                            keep_empty_rows = TRUE)
 
     d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
@@ -958,7 +890,7 @@ process_1_2475 <- function(network, domain, prodname_ms, site_code, component) {
 
 #precipitation: STATUS=READY
 #. handle_errors
-process_1_2543 <- function(network, domain, prodname_ms, site_code, component) {
+process_1_2543 <- function(network, domain, prodname_ms, site_code, component){
 
     #https://czo-archive.criticalzone.org/catalina-jemez/data/dataset/2543/
     #https://www.hydroshare.org/resource/f7df7b07ea19477ab7ea701c34bc356b/
@@ -994,8 +926,8 @@ process_1_2543 <- function(network, domain, prodname_ms, site_code, component) {
     }
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('DateTime' = '%m/%e/%Y %H:%M'),
-                         datetime_tz = 'US/Mountain',
+                         datetime_cols = c('DateTime' = '%m/%e/%Y %H:%M'),
+                         datetime_tz = 'Etc/GMT+7',
                          alt_site_code = list('MG_PC1' = 'Schist',
                                               'MG_PC2' = 'FernValley',
                                               'MG_Outlet' = 'Outlet',
@@ -1009,10 +941,12 @@ process_1_2543 <- function(network, domain, prodname_ms, site_code, component) {
                          data_col_pattern = '#V#',
                          set_to_NA = c('-9999.000', '-9999', '-999.9', '-999'),
                          is_sensor = TRUE,
-                         sampling_type = 'I')
+                         sampling_type = 'I',
+                         keep_empty_rows = TRUE)
 
     d <- ms_cast_and_reflag(d,
-                            varflag_col_pattern = NA)
+                            varflag_col_pattern = NA,
+                            keep_empty_rows = TRUE)
 
     d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
@@ -1021,7 +955,7 @@ process_1_2543 <- function(network, domain, prodname_ms, site_code, component) {
 
 #precip_chemistry: STATUS=READY
 #. handle_errors
-process_1_5491 <- function(network, domain, prodname_ms, site_code, component) {
+process_1_5491 <- function(network, domain, prodname_ms, site_code, component){
 
     #https://czo-archive.criticalzone.org/catalina-jemez/data/dataset/5491/
     #https://www.hydroshare.org/resource/4ab76a12613c493d82b2df57aa970c24/
@@ -1033,6 +967,7 @@ process_1_5491 <- function(network, domain, prodname_ms, site_code, component) {
                     c = component)
 
     d <- read.csv(rawfile, colClasses = 'character')
+    units <- as.character(d[1, ])
 
     method_col <- names(d)[grepl('Method',  names(d))]
 
@@ -1048,149 +983,126 @@ process_1_5491 <- function(network, domain, prodname_ms, site_code, component) {
                                     SiteCode == 'B2D-PSC' ~ 'B2D_PS',
                                     TRUE ~ SiteCode))
 
-    d[] <- lapply(d[], function(x) gsub(",", "", x))
+    # stringi::stri_enc_detect(x__)
+    d[] <- lapply(d[], function(x){
+        x_ = try(gsub(",", "", x), silent = TRUE)
+        if(inherits(x_, 'try-error')){
+            x <- iconv(x, from = "ISO-8859-1", to = "UTF-8")
+        }
+        x_ = gsub(",", "", x)
+        return(x_)
+    })
 
-    if(! 'SO4' %in% names(d)){
+    if(! nrow(d)){
         return(NULL)
     }
 
-    data_cols <- c('pH', 'EC' = 'spCond',
-                   'TIC', 'TOC', 'TN', 'F.' = 'F', 'Cl.' = 'Cl',
-                   'NO2.' = 'NO2', 'Br.' = 'Br', 'NO3.' = 'NO3',
-                   'SO4', 'PO4', 'Be9' = 'Be', 'B11' = 'B',
-                   'Al27' = 'Al', 'Na23' = 'Na', 'Mg24' = 'Mg',
-                   'Si28' = 'Si', 'K39' = 'K', 'Ca40' = 'Ca',
-                   'Ti49', 'V51' = 'V', 'Cr52' = 'Cr',
-                   'Mn55' = 'Mn', 'Fe56' = 'Fe', 'Co59' = 'Co',
-                   'Ni60', 'Cu63' = 'Cu', 'Zn64' = 'Zn',
-                   'As75' = 'As', 'Se78', 'Y89' = 'Y', 'Mo98' = 'Mo',
-                   'Ag107' = 'Ag', 'Sr88' = 'Sr', 'Sn118',
-                   'Sb121' = 'Sb', 'Ba138' = 'Ba', 'La139' = 'La',
-                   'Ce140' = 'Ce', 'Pr141' = 'Pr', 'Nd145',
-                   'Sm147', 'Eu153' = 'Eu', 'Gd157', 'Tb159' = 'Tb',
-                   'Dy164' = 'Dy', 'Ho165' = 'Ho', 'Er166' = 'Er',
-                   'Tm169' = 'Tm', 'Yb174' = 'Yb', 'Lu175' = 'Lu',
-                   'Tl205' = 'Tl', 'Pb208' = 'Pb', 'U238' = 'U',
-                   'NH4.N' = 'NH4_N')
+    ## standardize variable names
 
-    #SRP same as Ortho-P?
+    col_names <- colnames(d)
+    d <- as_tibble(d)
+
+    priority <- rep(NA, ncol(d))
+    for(i in seq_along(col_names)){
+
+        cn <- col_names[i]
+        ms_name <- purrr::keep(catalina_varname_priorities,  ~ cn %in% .x) %>%
+            names()
+
+        if(! length(ms_name)) next
+
+        priority[i] <- which(catalina_varname_priorities[[ms_name]] == cn)
+        colnames(d)[i] <- ms_name
+    }
+
+    ## choose among equivalent variables
+
+    col_names_new <- colnames(d)
+    dupers <- col_names_new[duplicated(col_names_new)]
+    drop_these <- c()
+    for(dup in dupers){
+
+        dup_set <- which(col_names_new == dup)
+        keep_this_one <- which.min(priority[dup_set])
+        drop_these <- c(drop_these, dup_set[-keep_this_one])
+    }
+
+    d <- select(d, ! drop_these)
+    if(length(drop_these)){
+        units <- units[-drop_these]
+        col_names_new <- col_names_new[-drop_these]
+    }
+    unit_names <- col_names_new
+
+    ## determine which units need to be converted
+
+    nonconvert_units <- grepl(paste(units_to_ignore,
+                                    collapse = '|'),
+                              colnames(d))
+
+    units <- units[! nonconvert_units]
+    unit_names <- unit_names[! nonconvert_units]
+
+    more_nonconverts <- grepl('mg/L', units)
+
+    units <- units[! more_nonconverts]
+    unit_names <- unit_names[! more_nonconverts]
+    names(units) <- unit_names
+
+    if(any(nchar(units) == 0 | is.na(units))){
+        message('unit problem')
+        browser()
+    }
+    if(any(! grepl('/L$', units))){
+        message('maybe unit problem')
+        browser()
+    }
+
+    ## back to normal
+
+    vars_encountered <- intersect(names(catalina_varname_priorities),
+                                  colnames(d))
+
     #Most metals are reported as their isotope, not sure to keep istope form in
     #varible name or change to just element.
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('date' = '%m/%e/%Y',
+                         datetime_cols = c('date' = '%m/%e/%Y',
                                               'time' = '%H:%M'),
-                         datetime_tz = 'US/Mountain',
+                         datetime_tz = 'Etc/GMT+7',
                          site_code_col = 'SiteCode',
-                         data_cols =  c('pH', 'EC' = 'spCond',
-                                        'TIC', 'TOC', 'TN', 'F.' = 'F', 'Cl.' = 'Cl',
-                                        'NO2.' = 'NO2', 'Br.' = 'Br', 'NO3.' = 'NO3',
-                                        'SO4', 'PO4', 'Be9' = 'Be', 'B11' = 'B',
-                                        'Al27' = 'Al', 'Na23' = 'Na', 'Mg24' = 'Mg',
-                                        'Si28' = 'Si', 'K39' = 'K', 'Ca40' = 'Ca',
-                                        'Ti49', 'V51' = 'V', 'Cr52' = 'Cr',
-                                        'Mn55' = 'Mn', 'Fe56' = 'Fe', 'Co59' = 'Co',
-                                        'Ni60', 'Cu63' = 'Cu', 'Zn64' = 'Zn',
-                                        'As75' = 'As', 'Se78', 'Y89' = 'Y', 'Mo98' = 'Mo',
-                                        'Ag107' = 'Ag', 'Sr88' = 'Sr', 'Sn118',
-                                        'Sb121' = 'Sb', 'Ba138' = 'Ba', 'La139' = 'La',
-                                        'Ce140' = 'Ce', 'Pr141' = 'Pr', 'Nd145',
-                                        'Sm147', 'Eu153' = 'Eu', 'Gd157', 'Tb159' = 'Tb',
-                                        'Dy164' = 'Dy', 'Ho165' = 'Ho', 'Er166' = 'Er',
-                                        'Tm169' = 'Tm', 'Yb174' = 'Yb', 'Lu175' = 'Lu',
-                                        'Tl205' = 'Tl', 'Pb208' = 'Pb', 'U238' = 'U',
-                                        'NH4.N' = 'NH4_N'),
+                         data_cols =  vars_encountered,
                          data_col_pattern = '#V#',
-                         set_to_NA = c('-9999.000', '-9999', '-999.9', '-999',
-                                       '-9,999'),
-                         is_sensor = FALSE)
+                         set_to_NA = errorcode_variants,
+                         is_sensor = FALSE,
+                         keep_empty_rows = TRUE)
 
     d <- ms_cast_and_reflag(d,
-                            varflag_col_pattern = NA)
+                            varflag_col_pattern = NA,
+                            keep_empty_rows = TRUE)
 
-    d <- ms_conversions(d,
-                        convert_units_from = c('Be' = 'ug/l',
-                                               'Al' = 'ug/l',
-                                               'Ti49' = 'ug/l',
-                                               'V' = 'ug/l',
-                                               'Cr' = 'ug/l',
-                                               'Mn' = 'ug/l',
-                                               'Fe' = 'ug/l',
-                                               'Co' = 'ug/l',
-                                               'Ni60' = 'ug/l',
-                                               'Cu' = 'ug/l',
-                                               'Zn' = 'ug/l',
-                                               'As' = 'ug/l',
-                                               'Se78' = 'ug/l',
-                                               'Y' = 'ug/l',
-                                               'Mo' = 'ug/l',
-                                               'Ag' = 'ug/l',
-                                               'Cd' = 'ug/l',
-                                               'Sn118' = 'ug/l',
-                                               'Sb' = 'ug/l',
-                                               'Ba' = 'ug/l',
-                                               'La' = 'ng/l',
-                                               'Ce' = 'ng/l',
-                                               'Pr' = 'ng/l',
-                                               'Nd145' = 'ng/l',
-                                               'Sm147' = 'ng/l',
-                                               'Eu' = 'ng/l',
-                                               'Gd157' = 'ng/l',
-                                               'Tb' = 'ng/l',
-                                               'Dy' = 'ng/l',
-                                               'Ho' = 'ng/l',
-                                               'Er' = 'ng/l',
-                                               'Tm' = 'ng/l',
-                                               'Yb' = 'ng/l',
-                                               'Lu' = 'ng/l',
-                                               'Tl' = 'ug/l',
-                                               'Pb' = 'ug/l',
-                                               'U' = 'ng/l'),
-                        convert_units_to = c('Be' = 'mg/l',
-                                             'Al' = 'mg/l',
-                                             'Ti49' = 'mg/l',
-                                             'V' = 'mg/l',
-                                             'Cr' = 'mg/l',
-                                             'Mn' = 'mg/l',
-                                             'Fe' = 'mg/l',
-                                             'Co' = 'mg/l',
-                                             'Ni60' = 'mg/l',
-                                             'Cu' = 'mg/l',
-                                             'Zn' = 'mg/l',
-                                             'As' = 'mg/l',
-                                             'Se78' = 'mg/l',
-                                             'Y' = 'mg/l',
-                                             'Mo' = 'mg/l',
-                                             'Ag' = 'mg/l',
-                                             'Cd' = 'mg/l',
-                                             'Sn118' = 'mg/l',
-                                             'Sb' = 'mg/l',
-                                             'Ba' = 'mg/l',
-                                             'La' = 'mg/l',
-                                             'Ce' = 'mg/l',
-                                             'Pr' = 'mg/l',
-                                             'Nd145' = 'mg/l',
-                                             'Sm147' = 'mg/l',
-                                             'Eu' = 'mg/l',
-                                             'Gd157' = 'mg/l',
-                                             'Tb' = 'mg/l',
-                                             'Dy' = 'mg/l',
-                                             'Ho' = 'mg/l',
-                                             'Er' = 'mg/l',
-                                             'Tm' = 'mg/l',
-                                             'Yb' = 'mg/l',
-                                             'Lu' = 'mg/l',
-                                             'Tl' = 'mg/l',
-                                             'Pb' = 'mg/l',
-                                             'U' = 'mg/l'))
+    new_units <- setNames(rep('mg/L',
+                              length(units)),
+                          names(units))
+
+    units <- sub('moles', 'mol', units)
+
+    if(length(units)){
+        d <- ms_conversions_(d,
+                            convert_units_from = units,
+                            convert_units_to = new_units)
+    }
 
     d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
+
+    #this happens in derive kernel for catalina
+    # d <- synchronize_timestep(d)
 
     return(d)
 }
 
 #precip_chemistry: STATUS=READY
 #. handle_errors
-process_1_5492 <- function(network, domain, prodname_ms, site_code, component) {
+process_1_5492 <- function(network, domain, prodname_ms, site_code, component){
 
     #https://czo-archive.criticalzone.org/catalina-jemez/data/dataset/5491/
     #https://www.hydroshare.org/resource/4ab76a12613c493d82b2df57aa970c24/
@@ -1204,97 +1116,120 @@ process_1_5492 <- function(network, domain, prodname_ms, site_code, component) {
     d <- read.csv(rawfile, colClasses = 'character')
 
     col_names <- colnames(d)
-    units <- as.character(d[1,])
-
-    names(units) <- col_names
-    units <- units[! grepl(paste(c('DateTime', 'SiteCode', 'SampleCode', 'Sampling',
-                                   'Method', 'SampleType', 'SampleMedium', 'pH',
-                                   'ph.1','Temp', 'FI', 'HIX', 'SUVA', 'SamplingNote',
-                                   'd13C.DIC', 'dD', 'd18O', 'EC', 'DO', 'Alkalinity',
-                                   'UVA254', 'Offser', 'Cond'),
-                                 collapse = '|'), col_names)]
-
-    units <- units[! grepl('mg/L', units)]
+    units <- as.character(d[1, ])
 
     d <- d %>%
         filter(SiteCode %in% c('RainColl_Burn_Low_OC', 'RainColl_MCZOB'))
-
-    col_names_to_vars <- c('pH', 'EC' = 'spCond', 'Cond' = 'spCond', 'TIC', 'TOC', 'TN', 'F', 'Cl',
-                           'NO2', 'Br', 'NO3', 'SO4', 'PO4', 'Be9' = 'Be', 'B11' = 'B',
-                           'Na23' = 'Na', 'Mg24' = 'Mg', 'Al27' = 'Al', 'Si28' = 'Si',
-                           'P31' = 'P', 'K39' = 'K', 'Ca40' = 'Ca', 'Ti49',
-                           'V52' = 'V', 'Cr52' = 'Cr', 'Mn55' = 'Mn', 'Fe56' = 'Fe',
-                           'Co59' = 'Co', 'Ni60', 'Cu63' = 'Cu', 'Zn64' = 'Zn',
-                           'As75' = 'As', 'Se78', 'Y89' = 'Y', 'Mo98' = 'Mo',
-                           'Ag107' = 'Ag', 'Cd114' = 'Cd', 'Sn118',
-                           'Sb121' = 'Sb', 'Ba138' = 'Ba', 'La139' = 'La',
-                           'Ce140' = 'Ce', 'Pr141' = 'Pr', 'Nd145',
-                           'Sm147' = 'Sm', 'Eu153' = 'Eu', 'Gd157',
-                           'Tb159' = 'Tb', 'Dy164' = 'Dy', 'Ho165' = 'Ho',
-                           'Er166' = 'Er', 'Tm169' = 'Tm', 'Yb174' = 'Yb',
-                           'Lu175' = 'Lu', 'Tl205' = 'Tl', 'Pb208' = 'Pb',
-                           'U238' = 'U', 'F.'= 'F', 'Cl.' = 'Cl', 'NO2.' = 'NO2',
-                           'Br.' = 'Br', 'NO3.' = 'NO3', 'SO4.' = 'SO4',
-                           'PO4.' = 'PO4')
 
     if(nrow(d) == 0){
         return(NULL)
     }
 
+    ## standardize variable names
 
-    names(col_names_to_vars) <- ifelse(names(col_names_to_vars) == '', unname(col_names_to_vars),
-                                       names(col_names_to_vars))
+    col_names <- colnames(d)
+    d <- as_tibble(d)
 
-    col_names_to_vars <- col_names_to_vars[names(col_names_to_vars) %in% names(d)]
+    priority <- rep(NA, ncol(d))
+    for(i in seq_along(col_names)){
 
-    if(any(duplicated(unname(col_names_to_vars)))){
-        col_names_to_vars <- col_names_to_vars[!duplicated(unname(col_names_to_vars))]
+        cn <- col_names[i]
+        ms_name <- purrr::keep(catalina_varname_priorities,  ~ cn %in% .x) %>%
+            names()
+
+        if(! length(ms_name)) next
+
+        priority[i] <- which(catalina_varname_priorities[[ms_name]] == cn)
+        colnames(d)[i] <- ms_name
     }
 
+    ## choose among equivalent variables
+
+    col_names_new <- colnames(d)
+    dupers <- col_names_new[duplicated(col_names_new)]
+    drop_these <- c()
+    for(dup in dupers){
+
+        dup_set <- which(col_names_new == dup)
+        keep_this_one <- which.min(priority[dup_set])
+        drop_these <- c(drop_these, dup_set[-keep_this_one])
+    }
+
+    d <- select(d, ! drop_these)
+    if(length(drop_these)){
+        units <- units[-drop_these]
+        col_names_new <- col_names_new[-drop_these]
+    }
+    unit_names <- col_names_new
+
+    ## determine which units need to be converted
+
+    nonconvert_units <- grepl(paste(units_to_ignore,
+                                    collapse = '|'),
+                              colnames(d))
+
+    units <- units[! nonconvert_units]
+    unit_names <- unit_names[! nonconvert_units]
+
+    more_nonconverts <- grepl('mg/L', units)
+
+    units <- units[! more_nonconverts]
+    unit_names <- unit_names[! more_nonconverts]
+    names(units) <- unit_names
+
+    if(any(nchar(units) == 0 | is.na(units))){
+        message('unit problem')
+        browser()
+    }
+    if(any(! grepl('/L$', units))){
+        message('maybe unit problem')
+        browser()
+    }
+
+    ## back to normal
+
+    vars_encountered <- intersect(names(catalina_varname_priorities),
+                                  colnames(d))
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('DateTime' = '%m/%e/%Y %H:%M'),
-                         datetime_tz = 'US/Mountain',
+                         datetime_cols = c('DateTime' = '%m/%e/%Y %H:%M'),
+                         datetime_tz = 'Etc/GMT+7',
                          site_code_col = 'SiteCode',
                          alt_site_code = list('Burn_Met_Low' = 'RainColl_Burn_Low_OC',
                                               'MCZOB_met' = 'RainColl_MCZOB'),
-                         data_cols =  col_names_to_vars,
+                         data_cols =  vars_encountered,
                          data_col_pattern = '#V#',
-                         set_to_NA = c('-9999.000', '-9999', '-999.9', '-999'),
-                         is_sensor = FALSE)
+                         set_to_NA = errorcode_variants,
+                         is_sensor = FALSE,
+                         keep_empty_rows = TRUE)
 
     d <- ms_cast_and_reflag(d,
-                            varflag_col_pattern = NA)
+                            varflag_col_pattern = NA,
+                            keep_empty_rows = TRUE)
 
-    for(i in 1:length(units)){
-        new_name <- col_names_to_vars[names(units[i]) == names(col_names_to_vars)]
+    new_units <- setNames(rep('mg/L',
+                              length(units)),
+                          names(units))
 
-        if(length(new_name) == 0) { next }
+    units <- sub('moles', 'mol', units)
 
-        names(units)[i] <- unname(new_name)
+    if(length(units)){
+        d <- ms_conversions_(d,
+                            convert_units_from = units,
+                            convert_units_to = new_units)
     }
 
-    units <- units[names(units) %in% unname(col_names_to_vars)]
-
-    units <- tolower(units)
-    new_units_names <- names(units)
-    units <- str_replace_all(units, 'umoles/l', 'umol/l')
-    names(units) <- new_units_names
-
-    new_units <- rep('mg/l', length(units))
-    names(new_units) <- names(units)
-
-    d <- ms_conversions(d,
-                        convert_units_from = units,
-                        convert_units_to = new_units)
     d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
+
+    #this happens in derive kernel for catalina
+    # d <- synchronize_timestep(d)
 
     return(d)
 }
 
 #precipitation: STATUS=READY
 #. handle_errors
-process_1_2415 <- function(network, domain, prodname_ms, site_code, component) {
+process_1_2415 <- function(network, domain, prodname_ms, site_code, component){
 
     #https://www.hydroshare.org/resource/5ca1378090884e72a8dcb796d882bb07/
 
@@ -1309,18 +1244,20 @@ process_1_2415 <- function(network, domain, prodname_ms, site_code, component) {
         mutate(site = 'MC_flux_tower')
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('DateTime' = '%m/%e/%Y %H:%M'),
-                         datetime_tz = 'US/Mountain',
+                         datetime_cols = c('DateTime' = '%m/%e/%Y %H:%M'),
+                         datetime_tz = 'Etc/GMT+7',
                          site_code_col = 'site',
                          data_cols =  c('PRECIP' = 'precipitation'),
                          data_col_pattern = '#V#',
                          set_to_NA = c('-9999.000', '-9999', '-999.9', '-999',
                                        'mm'),
                          is_sensor = TRUE,
-                         sampling_type = 'I')
+                         sampling_type = 'I',
+                         keep_empty_rows = TRUE)
 
     d <- ms_cast_and_reflag(d,
-                            varflag_col_pattern = NA)
+                            varflag_col_pattern = NA,
+                            keep_empty_rows = TRUE)
 
     d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
@@ -1329,7 +1266,7 @@ process_1_2415 <- function(network, domain, prodname_ms, site_code, component) {
 
 #precipitation: STATUS=READY
 #. handle_errors
-process_1_2425 <- function(network, domain, prodname_ms, site_code, component) {
+process_1_2425 <- function(network, domain, prodname_ms, site_code, component){
 
     #https://www.hydroshare.org/resource/1db7abcf0eb64ef49000c46a6133949d/
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}',
@@ -1348,18 +1285,20 @@ process_1_2425 <- function(network, domain, prodname_ms, site_code, component) {
     names(precip_cat) <- precip_col
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('DateTime' = '%m/%e/%Y %H:%M'),
-                         datetime_tz = 'US/Mountain',
+                         datetime_cols = c('DateTime' = '%m/%e/%Y %H:%M'),
+                         datetime_tz = 'Etc/GMT+7',
                          site_code_col = 'site',
                          data_cols =  precip_cat,
                          data_col_pattern = '#V#',
                          set_to_NA = c('-9999.000', '-9999', '-999.9', '-999',
                                        'mm'),
                          is_sensor = TRUE,
-                         sampling_type = 'I')
+                         sampling_type = 'I',
+                         keep_empty_rows = TRUE)
 
     d <- ms_cast_and_reflag(d,
-                            varflag_col_pattern = NA)
+                            varflag_col_pattern = NA,
+                            keep_empty_rows = TRUE)
 
     d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
@@ -1384,11 +1323,10 @@ process_2_ms001 <- function(network, domain, prodname_ms){
     sites <- unique(str_split_fixed(site_feather, '[.]', n = Inf)[,1])
 
     d <- tibble()
-    for(i in 1:length(sites)) {
-        site_files <- grep(sites[i], files, value = TRUE)
+    for(i in 1:length(sites)){
 
+        site_files <- grep(paste0('/', sites[i], '.feather'), files, value = TRUE)
         site_full <- map_dfr(site_files, read_feather)
-
         d <- rbind(d, site_full)
     }
 
@@ -1434,11 +1372,10 @@ process_2_ms002 <- function(network, domain, prodname_ms){
     sites <- unique(str_split_fixed(site_feather, '[.]', n = Inf)[,1])
 
     d <- tibble()
-    for(i in 1:length(sites)) {
-        site_files <- grep(sites[i], files, value = TRUE)
+    for(i in 1:length(sites)){
 
+		site_files <- grep(paste0('/', sites[i], '.feather'), files, value = TRUE)
         site_full <- map_dfr(site_files, read_feather)
-
         d <- rbind(d, site_full)
     }
 
@@ -1487,17 +1424,19 @@ process_2_ms003 <- function(network, domain, prodname_ms){
     sites <- unique(str_split_fixed(site_feather, '[.]', n = Inf)[,1])
 
     d <- tibble()
-    for(i in 1:length(sites)) {
-        site_files <- grep(sites[i], files, value = TRUE)
+    for(i in 1:length(sites)){
 
+		site_files <- grep(paste0('/', sites[i], '.feather'), files, value = TRUE)
         site_full <- map_dfr(site_files, read_feather)
-
         d <- rbind(d, site_full)
     }
 
     d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
-    d <- synchronize_timestep(d)
+    d <- synchronize_timestep(d,
+                              admit_NAs = TRUE,
+                              paired_p_and_pchem = FALSE,
+                              allow_pre_interp = TRUE)
 
     dir <- glue('data/{n}/{d}/derived/{p}',
                 n = network,
@@ -1540,17 +1479,18 @@ process_2_ms004 <- function(network, domain, prodname_ms){
     sites <- unique(str_split_fixed(site_feather, '[.]', n = Inf)[,1])
 
     d <- tibble()
-    for(i in 1:length(sites)) {
-        site_files <- grep(sites[i], files, value = TRUE)
-
+    for(i in 1:length(sites)){
+		site_files <- grep(paste0('/', sites[i], '.feather'), files, value = TRUE)
         site_full <- map_dfr(site_files, read_feather)
-
         d <- rbind(d, site_full)
     }
 
     d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
-    d <- synchronize_timestep(d)
+    d <- synchronize_timestep(d,
+                              admit_NAs = TRUE,
+                              paired_p_and_pchem = FALSE,
+                              allow_pre_interp = TRUE)
 
     dir <- glue('data/{n}/{d}/derived/{p}',
                 n = network,

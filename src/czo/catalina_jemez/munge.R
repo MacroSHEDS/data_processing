@@ -23,7 +23,6 @@ for(i in seq_len(nrow(prod_info))){
 
     sites <- names(held_data[[prodname_ms]])
 
-    # j <- 1
     for(j in 1:length(sites)){
 
         site_code <- sites[j]
@@ -33,8 +32,8 @@ for(i in seq_len(nrow(prod_info))){
                                          site_code = site_code)
 
         if(munge_status == 'ok'){
-              loginfo(glue('Nothing to do for {s} {p}',
-                       s=site_code, p=prodname_ms), logger=logger_module)
+            loginfo(glue('Nothing to do for {s} {p}',
+                         s=site_code, p=prodname_ms), logger=logger_module)
             next
         } else {
             loginfo(glue('Munging {s} {p}',
@@ -46,13 +45,6 @@ for(i in seq_len(nrow(prod_info))){
                                           site_code = site_code,
                                           prodname_ms = prodname_ms,
                                           tracker = held_data)
-
-        # munge_rtn <- munge_combined(network = network,
-        #                             domain = domain,
-        #                             site_code = site_code,
-        #                             prodname_ms = prodname_ms,
-        #                             tracker = held_data)
-
 
         if(is_ms_err(munge_rtn)){
 

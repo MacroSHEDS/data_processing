@@ -1,20 +1,20 @@
 ﻿For MacroSheds processing methods, see the
-<a href="https://eartharxiv.org/repository/view/3499/" style="color: blue; text-decoration: underline;">data paper preprint</a>, 
+<a href="https://aslopubs.onlinelibrary.wiley.com/doi/full/10.1002/lol2.10325" style="color: blue; text-decoration: underline;">data paper</a>, 
 where you will find subheadings on time-series data processing, watershed attributes retrieval and processing,
 derivation of additional products, and technical validation.
 
 For field data collection methods, laboratory methods and protocols, and primary source quality control procedures,
-consult primary source documentation. Links can be found in `attribution_and_intellectual_rights_ws_attr.csv` and `attribution_and_intellectual_rights_ts.xlsx`.
+consult primary source documentation. Links can be found in `attribution_and_intellectual_rights_ws_attr.csv` and `attribution_and_intellectual_rights_timeseries.csv`.
 
 ---
 
 The subset of MacroSheds that relates to streamflow and climate forcings makes it a valuable supplement to existing datasets like
-<a href="https://ral.ucar.edu/solutions/products/camels" style="color: vlue; text-decoration: underline;">CAMELS</a> (Newman et al. 2014) and <a href="https://water.usgs.gov/GIS/metadata/usgswrd/XML/gagesII_Sept2011.xml" style="color: vlue; text-decoration: underline;">GAGES-II</a>  (Falcone 2011).
+<a href="https://ral.ucar.edu/solutions/products/camels" style="color: blue; text-decoration: underline;">CAMELS</a> (Newman et al. 2014) and <a href="https://water.usgs.gov/GIS/metadata/usgswrd/XML/gagesII_Sept2011.xml" style="color: blue; text-decoration: underline;">GAGES-II</a>  (Falcone 2011).
 Using CAMELS methods, we have compiled watershed attributes and Daymet forcings, for each MacroSheds site, that are commensurable
 with the published CAMELS dataset, enhancing the predictive power of the combined set, especially for small watersheds. Of the 181
-sites with discharge data that MacroSheds adds to this corpus (as of version 1), 122 have watershed areas of 10 km2 or less, and
+sites with discharge data that MacroSheds added to this corpus in version 1, 122 have watershed areas of 10 km2 or less, and
 68 have areas of 1 km2 or less. For CAMELS, these numbers are 8 and 0, respectively. For GAGES-II, they are 207 and 2
-(see Figure 2 in the MacroSheds data paper).
+(see Figure 2 in the <a href="https://aslopubs.onlinelibrary.wiley.com/doi/full/10.1002/lol2.10325" style="color: blue; text-decoration: underline;">MacroSheds data paper</a>).
 
 Please note that we used gSSURGO (Soil Survey Staff 2022) instead of the superseded STATSGO dataset for soil characteristics.
 Two other CAMELS watershed attributes, `pet_mean` (mean potential evapotranspiration) and aridity, were also computed

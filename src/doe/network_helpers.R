@@ -40,6 +40,10 @@ retrieve_doe_product <- function(network,
                           set_details = deets,
                           new_status = new_status)
 
+    if(prodname_ms == 'stream_chemistry__VERSIONLESS009'){
+        result <- list()
+        result$url <- read_file('data/doe/east_river/raw/documentation/documentation_discharge__VERSIONLESS009.txt')
+    }
     source_urls <- get_source_urls(result_obj = result,
                                    processing_func = processing_func)
 

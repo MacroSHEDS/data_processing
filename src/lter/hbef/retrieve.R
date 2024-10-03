@@ -9,9 +9,7 @@ if(! is.null(prodname_filter)){
     prod_info <- filter(prod_info, prodname %in% prodname_filter)
 }
 
-# i=2
 for(i in seq_len(nrow(prod_info))){
-# for(i in 1){
 
     prodname_ms <<- glue(prod_info$prodname[i], '__', prod_info$prodcode[i])
 
@@ -40,7 +38,6 @@ for(i in seq_len(nrow(prod_info))){
 
     avail_sites <- unique(avail_sets$site_code)
 
-    # j=1
     for(j in 1:length(avail_sites)){
 
         site_code <- avail_sites[j]

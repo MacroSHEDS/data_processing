@@ -64,29 +64,33 @@ process_0_3200 <- function(set_details, network, domain){
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
-process_1_700 <- function(network, domain, prodname_ms, site_code,
-                          component) {
-    # site_code=site_code; component=in_comp
+process_1_700 <- function(network, domain, prodname_ms, site_code, component){
 
     rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                    n=network, d=domain, p=prodname_ms, s=site_code, c=component)
 
-    d <- ms_read_raw_csv(filepath = rawfile,
-                         datetime_cols = list('Date' = '%Y-%m-%d',
+    d_ <- read.csv(rawfile) %>%
+        distinct()
+
+    #2024: no location info available for missing sites: CBLM, GFuGR, GRGF, GRuTW
+    d <- ms_read_raw_csv(preprocessed_tibble = d_,
+                         datetime_cols = c('Date' = '%Y-%m-%d',
                                               'time' = '%H:%M'),
-                         datetime_tz = 'US/Eastern',
+                         datetime_tz = 'Etc/GMT+5',
                          site_code_col = 'Site',
-                         alt_site_code = list('GFCP' = 'GFCPisco',
-                                              'GFGL' = 'GFGLisco',
-                                              'GFVN' = 'GFVNisco',
-                                              'GRGF' = 'grgf',
-                                              'RGHT' = 'RGHTisco'),
+                         #very different values at e.g. GFCP and GFCPComp sometimes
+                         # alt_site_code = list('GFCP' = 'GFCPComp',
+                         #                      'GFGL' = 'GFGLComp',
+                         #                      'GFVN' = 'GFVNComp',
+                         #                      # 'GRGF' = 'grgf',
+                         #                      'RGHT' = 'RGHTisco'),
                          data_cols = c('Cl', 'NO3'='NO3_N', 'PO4'='PO4_P', 'SO4', 'TN', 'TP',
                                        'temperature'='temp', 'dox'='DO', 'pH',
-                                       'Turbidity'='turbid', 'Ecoli',
+                                       'Turbidity'='turbid_NTU', 'Ecoli',
                                        'conductivity'='spCond', 'Ca', 'HCO3',
-                                       'K', 'Mg', 'Na'),
-                         set_to_NA = -999.99,
+                                       'K', 'Mg', 'Na',
+                                       'd15N.NO3'='d15N_NO3', 'd18O.NO3'='d18O_NO3'),
+                         set_to_NA = error_code_variants,
                          data_col_pattern = '#V#',
                          is_sensor = FALSE)
 
@@ -97,92 +101,100 @@ process_1_700 <- function(network, domain, prodname_ms, site_code,
     d <- mutate(d,
                 val = ifelse(var == 'GN_pH' & val > 14, NA, val))
 
-    # Turbidity is in NTU the ms_vars is in FNU, not sure these are comparable
-    d <- ms_conversions(d,
-                        convert_units_from = c(PO4_P = 'ug/l'),
-                        convert_units_to = c(PO4_P = 'mg/l'))
+    conv_units <- c('PO4_P', 'SO4', 'TP', 'DO', 'Ca', 'HCO3', 'K', 'Mg', 'Na')
+
+    d <- ms_conversions_(
+        d,
+        convert_units_from = setNames(rep('ug/l', length(conv_units)),
+                                      conv_units),
+        convert_units_to = setNames(rep('mg/l', length(conv_units)),
+                                    conv_units)
+    )
 
     return(d)
 }
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
-process_1_900 <- function(network, domain, prodname_ms, site_code,
-                          component) {
-    # site_code=site_code; component=in_comp
+process_1_900 <- function(network, domain, prodname_ms, site_code, component){
 
     rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                    n=network, d=domain, p=prodname_ms, s=site_code, c=component)
 
     d <- ms_read_raw_csv(filepath = rawfile,
-                         datetime_cols = list('Date' = '%Y-%m-%d',
+                         datetime_cols = c('Date' = '%Y-%m-%d',
                                               'time' = '%H:%M'),
-                         datetime_tz = 'US/Eastern',
+                         datetime_tz = 'Etc/GMT+5',
                          site_code_col = 'Site',
                          data_cols = c('Cl', 'NO3'='NO3_N', 'PO4'='PO4_P', 'SO4', 'TN', 'TP',
                                        'temperature'='temp', 'dox'='DO', 'ph'='pH',
-                                       'Turbidity'='turbid', 'Ecoli'),
-                         set_to_NA = c(-999.990, -999.99, -999),
+                                       'Turbidity'='turbid_NTU', 'Ecoli'),
+                         set_to_NA = c(error_code_variants,
+                                       'brown/clear water', 'clear', 'teal',
+                                       'orange precipitate', 'turbid', 'bubbles'),
                          data_col_pattern = '#V#',
                          is_sensor = FALSE)
 
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
 
-    d <- ms_conversions(d,
-                        convert_units_from = c(PO4_P = 'ug/l'),
-                        convert_units_to = c(PO4_P = 'mg/l'))
+    d <- ms_conversions_(d,
+                        convert_units_from = c(DO = 'ug/l'),
+                        convert_units_to = c(DO = 'mg/l'))
 
     return(d)
 }
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
-process_1_800 <- function(network, domain, prodname_ms, site_code,
-                          component) {
+process_1_800 <- function(network, domain, prodname_ms, site_code, component){
 
     rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
                    n=network, d=domain, p=prodname_ms, s=site_code, c=component)
 
     d <- ms_read_raw_csv(filepath = rawfile,
-                         datetime_cols = list('date' = '%Y-%m-%d'),
-                         datetime_tz = 'US/Eastern',
+                         datetime_cols = c('date' = '%Y-%m-%d'),
+                         datetime_tz = 'Etc/GMT+5',
                          site_code_col = 'site',
                          data_cols = c('chloride'='Cl', 'nitrate'='NO3_N', 'phosphate'='PO4_P',
                                        'sulfate'='SO4', 'nitrogen_total'='TN',
                                        'phosphorus_total'='TP'),
-                         set_to_NA = c(-999.990, -999.99, -999),
+                         set_to_NA = error_code_variants,
                          data_col_pattern = '#V#',
                          is_sensor = FALSE)
 
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
 
-    d <- ms_conversions(d,
+    d <- ms_conversions_(d,
                         convert_units_from = c(PO4_P = 'ug/l',
-                                               TP = 'ug/l'),
+                                               TP = 'ug/l',
+                                               SO4 = 'ug/l'),
                         convert_units_to = c(PO4_P = 'mg/l',
-                                             TP = 'mg/l'))
+                                             TP = 'mg/l',
+                                             SO4 = 'mg/l'))
 
       return(d)
 }
 
 #precipitation: STATUS=READY
 #. handle_errors
-process_1_3110 <- function(network, domain, prodname_ms, site_code,
-                           component) {
+process_1_3110 <- function(network, domain, prodname_ms, site_code, component){
 
-    rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
-                   n=network, d=domain, p=prodname_ms, s=site_code, c=component)
+    rawfile <- glue('data/{n}/{d}/raw/{p}/{s}/{c}.csv',
+                    n = network,
+                    d = domain,
+                    p = prodname_ms,
+                    s = site_code,
+                    c = component)
 
     d <- ms_read_raw_csv(filepath = rawfile,
-                         datetime_cols = list('Date_Time_EST' = '%Y-%m-%d %H:%M'),
-                         datetime_tz = 'US/Eastern',
+                         datetime_cols = c('Date_Time_EST' = '%Y-%m-%d %H:%M'),
+                         datetime_tz = 'Etc/GMT+5',
                          site_code_col = 'Rain_Gauge_ID',
                          data_cols = c('Precipitation_mm'='precipitation'),
                          data_col_pattern = '#V#',
                          is_sensor = TRUE)
-
 
     # Baltimore precip is recorded at 8 sites where there are two tipping-bucket
     # rain gauges each. It appears that only rain events are reported, as the
@@ -190,35 +202,34 @@ process_1_3110 <- function(network, domain, prodname_ms, site_code,
     # both gauges at each site are averaged and 0 values are filled in for all
     # minutes where there is not a record.
 
-
     d <- d %>%
-      rename(val = 3) %>%
-      mutate(site_code = str_split_fixed(site_code, '_', n = Inf)[,1]) %>%
-      group_by(datetime, site_code) %>%
-      summarise(val = mean(val, na.rm = TRUE))
+        rename(val = 3) %>%
+        mutate(site_code = str_split_fixed(site_code, '_', n = Inf)[, 1]) %>%
+        group_by(datetime, site_code) %>%
+        summarise(val = mean(val, na.rm = TRUE))
 
     rain_gauges <- unique(d$site_code)
 
     final <- tibble()
-    for(i in 1:length(rain_gauges)) {
+    for(i in 1:length(rain_gauges)){
 
-      onesite <- d %>%
-        filter(site_code == rain_gauges[i])
+        onesite <- d %>%
+            filter(site_code == rain_gauges[i])
 
-      dates <- seq.POSIXt(min(onesite$datetime), max(onesite$datetime), by = 'min')
+        dates <- seq.POSIXt(min(onesite$datetime), max(onesite$datetime), by = 'min')
 
-      with_0s <- tibble(datetime = dates)
+        with_0s <- tibble(datetime = dates)
 
-      fin <- full_join(with_0s, onesite, by = 'datetime') %>%
-        mutate(val = ifelse(is.na(val), 0, val)) %>%
-        mutate(site_code = rain_gauges[i])
+        fin <- full_join(with_0s, onesite, by = 'datetime') %>%
+            mutate(val = ifelse(is.na(val), 0, val)) %>%
+            mutate(site_code = rain_gauges[i])
 
-      final <- rbind(final, fin)
+        final <- rbind(final, fin)
     }
 
     d <- final %>%
-      mutate(var = 'IS_precipitation',
-             ms_status = 0)
+        mutate(var = 'IS_precipitation',
+               ms_status = 0)
 
     return(d)
 }
@@ -247,11 +258,12 @@ process_1_3200 <- function(network, domain, prodname_ms, site_code, component){
 
     shp_files <- grep('.shp', files, value = T)
 
-    shp_files <- shp_files[!grepl('.shp.xml', shp_files)]
+    shp_files <- shp_files[! grepl('.shp.xml', shp_files)]
 
     full_site_code <- str_split_fixed(shp_files, '[/]', n = Inf)[,8]
     full_site_code <- str_split_fixed(full_site_code, '[.]', n = Inf)[,1]
 
+    wbs <- tibble()
     for(i in 1:length(shp_files)){
 
         site_code <- case_when(full_site_code == 'Baisman_Run' ~ 'BARN',
@@ -263,25 +275,20 @@ process_1_3200 <- function(network, domain, prodname_ms, site_code, component){
                                full_site_code == 'Pond_Branch' ~ 'POBR',
                                full_site_code == 'Villa_Nova' ~ 'GFVN')
 
-        wb <- st_read(shp_files[i]) %>%
+        wb <- st_read(shp_files[i], quiet = TRUE) %>%
           mutate(site_code = !!site_code[i],
-                 area = Area_m2/10000) %>%
+                 area = Area_m2 / 10000) %>%
           select(-Area_m2) %>%
           sf::st_transform(4326)
 
-        write_ms_file(d = wb,
-                      network = network,
-                      domain = domain,
-                      prodname_ms = prodname_ms,
-                      site_code = site_code[i],
-                      level = 'munged',
-                      shapefile = TRUE,
-                      link_to_portal = FALSE)
+        wbs <- rbind(wbs, wb)
     }
 
-    unlink(zipped_files)
+    unlink('data/lter/baltimore/raw/ws_boundary__3200/01m', recursive = TRUE)
+    unlink('data/lter/baltimore/raw/ws_boundary__3200/30m', recursive = TRUE)
+    unlink('data/lter/baltimore/raw/ws_boundary__3200/READ\ ME.txt')
 
-    return()
+    return(wbs)
 }
 
 #derive kernels ####
@@ -296,7 +303,7 @@ process_2_ms014 <- stream_gauge_from_site_data
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
-process_2_ms012 <- function(network, domain, prodname_ms) {
+process_2_ms012 <- function(network, domain, prodname_ms){
 
     combine_products(network = network,
                      domain = domain,
@@ -310,7 +317,7 @@ process_2_ms012 <- function(network, domain, prodname_ms) {
 
 #discharge: STATUS=READY
 #. handle_errors
-process_2_ms011 <- function(network, domain, prodname_ms) {
+process_2_ms011 <- function(network, domain, prodname_ms){
 
     pull_usgs_discharge(network = network,
                         domain = domain,

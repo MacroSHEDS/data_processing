@@ -245,7 +245,8 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
                     s = site_code,
                     c = component)
 
-    temp_dir <- tempdir()
+    temp_dir <- file.path(tempdir(), 'fernow')
+    dir.create(temp_dir, recursive = TRUE, showWarnings = FALSE)
     unzip(rawfile, exdir = temp_dir)
     fils <- list.files(temp_dir, recursive = T)
 
@@ -253,18 +254,19 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
 
     rel_file_path <- paste0(temp_dir, '/', relevant_file)
 
-    #DATETIME is messed up cuz of one digit thing
     d <- ms_read_raw_csv(filepath = rel_file_path,
-                         datetime_cols = list('Date..mm.dd.yyyy.' = '%m/%e/%Y'),
-                         datetime_tz = 'US/Eastern',
+                         datetime_cols = c('Date..mm.dd.yyyy.' = '%m/%e/%Y'),
+                         datetime_tz = 'Etc/GMT+5',
                          site_code_col = 'Watershed',
                          data_cols =  c('Precipitation..mm.' = 'precipitation'),
                          data_col_pattern = '#V#',
                          is_sensor = FALSE,
-                         sampling_type = 'I')
+                         sampling_type = 'I',
+                         keep_empty_rows = FALSE)
 
     d <- ms_cast_and_reflag(d,
-                            varflag_col_pattern = NA)
+                            varflag_col_pattern = NA,
+                            keep_empty_rows = FALSE)
 
     d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
@@ -302,7 +304,8 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
                     s = site_code,
                     c = component)
 
-    temp_dir <- tempdir()
+    temp_dir <- file.path(tempdir(), 'fernow')
+    dir.create(temp_dir, recursive = TRUE, showWarnings = FALSE)
     unzip(rawfile, exdir = temp_dir)
     fils <- list.files(temp_dir, recursive = T)
 
@@ -311,8 +314,8 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
     rel_file_path <- paste0(temp_dir, '/', relevant_file)
 
     d <- ms_read_raw_csv(filepath = rel_file_path,
-                         datetime_cols = list('Date..mm.dd.yyyy.' = '%m/%e/%Y'),
-                         datetime_tz = 'US/Eastern',
+                         datetime_cols = c('Date..mm.dd.yyyy.' = '%m/%e/%Y'),
+                         datetime_tz = 'Etc/GMT+5',
                          site_code_col = 'Watershed',
                          data_cols =  c('Discharge..mm.' = 'discharge'),
                          data_col_pattern = '#V#',
@@ -367,7 +370,8 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
                     s = site_code,
                     c = component)
 
-    temp_dir <- tempdir()
+    temp_dir <- file.path(tempdir(), 'fernow')
+    dir.create(temp_dir, recursive = TRUE, showWarnings = FALSE)
     unzip(rawfile, exdir = temp_dir)
     fils <- list.files(temp_dir, recursive = T)
 
@@ -376,12 +380,11 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
     rel_file_path <- paste0(temp_dir, '/', relevant_file)
 
     d <- ms_read_raw_csv(filepath = rel_file_path,
-                         datetime_cols = list('Date..mm.dd.yyyy.' = '%m/%e/%y'),
-                         datetime_tz = 'US/Eastern',
+                         datetime_cols = c('Date..mm.dd.yyyy.' = '%m/%e/%y'),
+                         datetime_tz = 'Etc/GMT+5',
                          site_code_col = 'Weather.Station',
                          data_cols =  c('pH' = 'pH',
                                         'Electrical.Conductivity..uS.cm.' = 'spCond',
-                                        # there are to ANC in ms_vars check
                                         'Acid.Neutralizing.Capacity..ueq.L.' = 'ANC',
                                         'Calcium..mg.L.' = 'Ca',
                                         'Magnesium..mg.L.' = 'Mg',
@@ -392,15 +395,24 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
                                         'Sulfate..mg.L.' = 'SO4',
                                         'Nitrate..mg.L.' = 'NO3'),
                          data_col_pattern = '#V#',
+                         set_to_NA = c('', '.'),
                          is_sensor = FALSE,
-                         sampling_type = 'G')
+                         sampling_type = 'G',
+                         keep_empty_rows = TRUE)
 
     d <- ms_cast_and_reflag(d,
-                            varflag_col_pattern = NA)
+                            varflag_col_pattern = NA,
+                            keep_empty_rows = TRUE)
+
+    d <- ms_conversions_(d,
+                        convert_units_from = c(ANC = 'ueq/l'),
+                        convert_units_to = c(ANC = 'eq/l'))
 
     d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
-    d <- synchronize_timestep(d)
+    d <- synchronize_timestep(d,
+                              admit_NAs = TRUE,
+                              allow_pre_interp = TRUE)
 
     unlink(temp_dir, recursive = TRUE)
 
@@ -434,7 +446,8 @@ process_1_VERSIONLESS004 <- function(network, domain, prodname_ms, site_code, co
                     s = site_code,
                     c = component)
 
-    temp_dir <- tempdir()
+    temp_dir <- file.path(tempdir(), 'fernow')
+    dir.create(temp_dir, recursive = TRUE, showWarnings = FALSE)
     unzip(rawfile, exdir = temp_dir)
     fils <- list.files(temp_dir, recursive = T)
 
@@ -443,13 +456,12 @@ process_1_VERSIONLESS004 <- function(network, domain, prodname_ms, site_code, co
     rel_file_path <- paste0(temp_dir, '/', relevant_file)
 
     d <- ms_read_raw_csv(filepath = rel_file_path,
-                         datetime_cols = list('Date..mm.dd.yyyy.' = '%m/%e/%Y'),
-                         datetime_tz = 'US/Eastern',
+                         datetime_cols = c('Date..mm.dd.yyyy.' = '%m/%e/%Y'),
+                         datetime_tz = 'Etc/GMT+5',
                          site_code_col = 'Watershed',
                          data_cols =  c('pH' = 'pH',
                                         'Electrical.Conductivity..uS.cm.' = 'spCond',
                                         'Alkalinity..mg.CaCO3.L.' = 'alk',
-                                        # there are to ANC in ms_vars check
                                         'Acid.Neutralizing.Capacity..ueq.L.' = 'ANC',
                                         'Calcium..mg.L.' = 'Ca',
                                         'Magnesium..mg.L.' = 'Mg',
@@ -459,14 +471,15 @@ process_1_VERSIONLESS004 <- function(network, domain, prodname_ms, site_code, co
                                         'Sulfate..mg.L.' = 'SO4',
                                         'Nitrate..mg.L.' = 'NO3'),
                          data_col_pattern = '#V#',
+                         set_to_NA = '',
                          is_sensor = FALSE)
 
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
 
-    d <- ms_conversions(d,
-                        convert_units_from = c('NO3' = 'mg/l'),
-                        convert_units_to = c('NO3' = 'mg/l'))
+    d <- ms_conversions_(d,
+                        convert_units_from = c(ANC = 'ueq/l'),
+                        convert_units_to = c(ANC = 'eq/l'))
 
     d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
@@ -532,7 +545,7 @@ process_2_ms004 <- function(network, domain, prodname_ms){
                                   qprod = qprod,
                                   site_code = s))
 
-        if(!is.null(flux)){
+        if(! is.null(flux)){
 
             write_ms_file(d = flux,
                           network = network,
@@ -545,4 +558,6 @@ process_2_ms004 <- function(network, domain, prodname_ms){
     }
 }
 
-
+#stream_gauge_locations: STATUS=READY
+#. handle_errors
+process_2_ms008 <- stream_gauge_from_site_data

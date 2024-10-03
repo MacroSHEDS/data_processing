@@ -1,0 +1,33 @@
+class_code,color,macrosheds_code,IGBP name,desc
+1,#05450a,igbp_ev_need_for,Evergreen Needleleaf Forests ,"Dominated by evergreen conifer trees (canopy
+>2m). Tree cover >60%."
+2,#086a10,igbp_ev_broad_for,Evergreen Broadleaf Forests,"Dominated by evergreen broadleaf and palmate
+trees (canopy >2m). Tree cover >60%"
+3,#54a708,igbp_decid_need_for,Deciduous Needleleaf Forests,"Dominated by deciduous needleleaf (larch) trees
+(canopy >2m). Tree cover >60%"
+4,#78d203,igbp_decid_broad_for,Deciduous Broadleaf Forests,"Dominated by deciduous broadleaf trees (canopy
+>2m). Tree cover >60%."
+5,#009900,igbp_mixed_for,Mixed Forests,"Dominated by neither deciduous nor evergreen
+(40-60% of each) tree type (canopy >2m). Tree
+cover >60%."
+6,#c6b044,igbp_cloased_shrub,Closed Shrublands,"Dominated by woody perennials (1-2m height)
+>60% cover"
+7,#dcd159,igbp_open_shrub,Open Shrublands,"Dominated by woody perennials (1-2m height)
+10-60% cover."
+8,#dade48,igbp_woody_sav,Woody Savannas ,Tree cover 30-60% (canopy >2m).
+9,#fbff13,igbp_savanna,Savannas,Tree cover 10-30% (canopy >2m).
+10,#b6ff05,igbp_grassland,Grasslands,Dominated by herbaceous annuals (<2m).
+11,#27ff87,igbp_per_wetland,Permanent Wetlands,"Permanently inundated lands with 30-60% water
+cover and >10% vegetated cover."
+12,#c24f44,igbp_cropland,Croplands,At least 60% of area is cultivated cropland.
+13,#a5a5a5,igbp_urban,Urban and Built-up Lands,"At least 30% impervious surface area including
+building materials, asphalt, and vehicles."
+14,#ff6d4c,igbp_crop_natural_mos,Cropland/Natural Vegetation Mosaics,"Mosaics of small-scale cultivation 40-60% with
+natural tree, shrub, or herbaceous vegetation."
+15,#69fff8,igbp_perm_snow,Permanent Snow and Ice,"At least 60% of area is covered by snow and ice
+for at least 10 months of the year."
+16,#f9ffa4,igbp_barren,Barren,"At least 60% of area is non-vegetated barren
+(sand, rock, soil) areas with less than 10% vegetation."
+17,#1c0dff,igbp_water,Water Bodies,At least 60% of area is covered by permanent water bodies
+255,,igbp_unclassified,Unclassified,"Has not received a map label because of missing
+inputs."

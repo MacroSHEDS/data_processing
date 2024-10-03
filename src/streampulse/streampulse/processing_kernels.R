@@ -272,7 +272,7 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
     d$'X_00060_00003'<-28.3168*(d$'X_00060_00003')
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                    datetime_cols = list('Date' = '%Y-%m-%d'),
+                    datetime_cols = c('Date' = '%Y-%m-%d'),
                     datetime_tz = 'US/Central',
                     site_code_col = 'site_name',
                     data_cols = c('X_00060_00003'= 'discharge'),
@@ -317,7 +317,7 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
   d$'X_00060_00003'<-28.3168*(d$'X_00060_00003')
   
   d <- ms_read_raw_csv(preprocessed_tibble = d,
-                       datetime_cols = list('Date' = '%Y-%m-%d'),
+                       datetime_cols = c('Date' = '%Y-%m-%d'),
                        datetime_tz = 'US/Central',
                        site_code_col = 'site_name',
                        data_cols = c('X_00060_00003'= 'discharge'),
@@ -362,7 +362,7 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
   d$'X_00060_00003'<-28.3168*(d$'X_00060_00003')
   
   d <- ms_read_raw_csv(preprocessed_tibble = d,
-                       datetime_cols = list('Date' = '%Y-%m-%d'),
+                       datetime_cols = c('Date' = '%Y-%m-%d'),
                        datetime_tz = 'US/Central',
                        site_code_col = 'site_name',
                        data_cols = c('X_00060_00003'= 'discharge'),
@@ -406,7 +406,7 @@ process_1_VERSIONLESS004 <- function(network, domain, prodname_ms, site_code, co
   d$'X_00060_00003'<-28.3168*(d$'X_00060_00003')
 
   d <- ms_read_raw_csv(preprocessed_tibble = d,
-                       datetime_cols = list('Date' = '%Y-%m-%d'),
+                       datetime_cols = c('Date' = '%Y-%m-%d'),
                        datetime_tz = 'US/Central',
                        site_code_col = 'site_name',
                        data_cols = c('X_00060_00003'= 'discharge'),
@@ -513,7 +513,7 @@ process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_code, co
   d <- d_new
 
   d <- ms_read_raw_csv(preprocessed_tibble = d,
-                       datetime_cols = list('sampledate' = '%Y-%m-%d'),
+                       datetime_cols = c('sampledate' = '%Y-%m-%d'),
                        datetime_tz = 'US/Central',
                        site_code_col = 'site_name',
                        data_cols = trout_lake_chem_var_names,
@@ -537,7 +537,7 @@ process_1_VERSIONLESS005 <- function(network, domain, prodname_ms, site_code, co
     trout_lake_aq_chem_units_new[ms_name] = ms_units
   }
 
-  d <- ms_conversions(d,
+  d <- ms_conversions_(d,
                       convert_units_from = trout_lake_aq_chem_units_old,
                       convert_units_to = trout_lake_aq_chem_units_new
                       )
@@ -575,10 +575,9 @@ process_1_VERSIONLESS006 <- function(network, domain, prodname_ms, site_code, co
                     c = component)
 
     # creating a temporary directory to unzip the folder in
-    temp_dir <- tempdir()
-    dir.create(temp_dir,
-               showWarnings = FALSE,
-               recursive = TRUE)
+    temp_dir <- file.path(tempdir(), domain)
+    dir.create(temp_dir, recursive = TRUE, showWarnings = FALSE)
+
     unzip(rawfile,
           exdir = temp_dir)
 

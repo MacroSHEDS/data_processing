@@ -220,21 +220,25 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
         mutate(site = 'combined_gauges')
 
     daily_dat <- ms_read_raw_csv(preprocessed_tibble = daily_dat,
-                                 datetime_cols = list('Date' = '%Y%m%d'),
-                                 datetime_tz = 'US/Eastern',
+                                 datetime_cols = c('Date' = '%Y%m%d'),
+                                 datetime_tz = 'Etc/GMT+5',
                                  site_code_col = 'site',
                                  data_cols =  c('PRECIP' = 'precipitation'),
                                  data_col_pattern = '#V#',
-                                 is_sensor = TRUE)
+                                 is_sensor = TRUE,
+                                 keep_empty_rows = TRUE)
 
     daily_dat <- ms_cast_and_reflag(daily_dat,
-                                    varflag_col_pattern = NA)
+                                    varflag_col_pattern = NA,
+                                    keep_empty_rows = TRUE)
 
     daily_dat <- qc_hdetlim_and_uncert(daily_dat, prodname_ms = prodname_ms)
 
-    daily_dat <- synchronize_timestep(daily_dat)
+    daily_dat <- synchronize_timestep(daily_dat,
+                                      admit_NAs = TRUE,
+                                      allow_pre_interp = TRUE)
 
-    daily_dat <- daily_dat %>%
+    daily_dat <- daily_dat %>% #??
         filter(datetime > '1997-01-01',
                datetime < '1998-12-30')
 
@@ -242,27 +246,34 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
         mutate(site = 'combined_gauges')
 
     hourly_dat <- ms_read_raw_csv(preprocessed_tibble = hourly_dat,
-                                 datetime_cols = list('DATE' = '%Y%m%d',
+                                 datetime_cols = c('DATE' = '%Y%m%d',
                                                       'TIME' = '%H:%M'),
-                                 datetime_tz = 'US/Eastern',
+                                 datetime_tz = 'Etc/GMT+5',
                                  site_code_col = 'site',
                                  data_cols =  c('PRECIP' = 'precipitation'),
                                  summary_flagcols = 'FLAG',
                                  data_col_pattern = '#V#',
                                  set_to_NA = '-9999',
-                                 is_sensor = TRUE)
+                                 is_sensor = TRUE,
+                                 keep_empty_rows = TRUE)
 
     hourly_dat <- ms_cast_and_reflag(hourly_dat,
                                      varflag_col_pattern = NA,
-                                     summary_flags_to_drop = list('FLAG' = 'DROP'),
-                                     summary_flags_dirty = list('FLAG' = 'FLAGGED'))
+                                     summary_flags_to_drop = list('FLAG' = 'sentinel'),
+                                     summary_flags_dirty = list('FLAG' = 'FLAGGED'),
+                                     keep_empty_rows = TRUE)
 
     hourly_dat <- qc_hdetlim_and_uncert(hourly_dat, prodname_ms = prodname_ms)
 
-    hourly_dat <- synchronize_timestep(hourly_dat)
+    hourly_dat <- synchronize_timestep(hourly_dat,
+                                       admit_NAs = TRUE,
+                                       allow_pre_interp = TRUE)
 
     d <- rbind(daily_dat, hourly_dat) %>%
-        arrange(datetime)
+        arrange(datetime) %>%
+        group_by(datetime) %>%
+        filter(n() == 1 | ms_interp == 0) %>%
+        ungroup()
 
     sites <- unique(d$site_code)
 
@@ -279,6 +290,7 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
                       level = 'munged',
                       shapefile = FALSE)
     }
+
     return()
 }
 
@@ -310,8 +322,8 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
         pivot_longer(cols = c('EF_DISCHARGE', 'WF_DISCHARGE'))
 
     daily_dat <- ms_read_raw_csv(preprocessed_tibble = daily_dat,
-                                 datetime_cols = list('DATE' = '%Y%m%d'),
-                                 datetime_tz = 'US/Eastern',
+                                 datetime_cols = c('DATE' = '%Y%m%d'),
+                                 datetime_tz = 'Etc/GMT+5',
                                  site_code_col = 'name',
                                  data_cols =  c('value' = 'discharge'),
                                  alt_site_code = list(east_fork = 'EF_DISCHARGE',
@@ -344,8 +356,8 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
         pivot_longer(cols = c('EF_DISCHARGE', 'WF_DISCHARGE'))
 
     min_dat <- ms_read_raw_csv(preprocessed_tibble = min_dat,
-                               datetime_cols = list('DATE' = '%Y%m%d'),
-                               datetime_tz = 'US/Eastern',
+                               datetime_cols = c('DATE' = '%Y%m%d'),
+                               datetime_tz = 'Etc/GMT+5',
                                site_code_col = 'name',
                                data_cols =  c('value' = 'discharge'),
                                alt_site_code = list(east_fork = 'EF_DISCHARGE',
@@ -356,22 +368,34 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
                                is_sensor = TRUE)
 
     min_dat <- ms_cast_and_reflag(min_dat,
-                                    varflag_col_pattern = NA,
-                                    summary_flags_to_drop = list('CODE' = 'DROP'),
-                                    summary_flags_dirty = list('CODE' = c('EFWF_EST',
-                                                                          'WF_EST',
-                                                                          'EF_EST',
-                                                                          'EFWT_EST',
-                                                                          'WF_REG',
-                                                                          'EF_REG',
-                                                                          'WF_REG2',
-                                                                          'EFWF_ISCO')))
+                                  varflag_col_pattern = NA,
+                                  summary_flags_to_drop = list('CODE' = 'DROP'),
+                                  summary_flags_dirty = list('CODE' = c('EFWF_EST',
+                                                                        'WF_EST',
+                                                                        'EF_EST',
+                                                                        'EFWT_EST',
+                                                                        'WF_REG',
+                                                                        'EF_REG',
+                                                                        'WF_REG2',
+                                                                        'EFWF_ISCO')))
 
     min_dat <- qc_hdetlim_and_uncert(min_dat, prodname_ms = prodname_ms)
 
     min_dat <- synchronize_timestep(min_dat)
 
-    d <- rbind(daily_dat, min_dat) %>%
+    d <- rbind(daily_dat, min_dat)
+
+    dups <- duplicated(select(d, datetime, var, site_code)) |
+            duplicated(select(d, datetime, var, site_code), fromLast = T)
+
+    #average duplicates
+    d <- d[dups, ] %>%
+        group_by(datetime, site_code, var) %>%
+        summarize(val = mean(val),
+                  ms_status = max(ms_status),
+                  ms_interp = max(ms_interp),
+                  .groups = 'drop') %>%
+        bind_rows(d[! dups, ]) %>%
         arrange(datetime)
 
     sites <- unique(d$site_code)
@@ -420,15 +444,15 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
         mutate(site = 'west_fork')
 
     west_dat <- ms_read_raw_csv(preprocessed_tibble = west_dat,
-                                datetime_cols = list('DATE' = '%Y%m%d'),
-                                datetime_tz = 'US/Eastern',
+                                datetime_cols = c('DATE' = '%Y%m%d'),
+                                datetime_tz = 'Etc/GMT+5',
                                 site_code_col = 'site',
                                 data_cols =  c('TEMP' = 'temp',
                                                'SP_COND' = 'spCond',
                                                'PH' = 'pH',
                                                'ALK' = 'alk',
                                                'DOC_CONC' = 'DOC',
-                                               'SRP_CONC' = 'SRP',
+                                               'SRP_CONC' = 'orthophosphate_P',
                                                'TDP_CONC' = 'TDP',
                                                'NH4_N_CONC' = 'NH4_N',
                                                'NO3_N_CONC' = 'NO3_NO2_N',
@@ -461,13 +485,13 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
                                                             'V7'),
                                    variable_flags_to_drop = 'DROP')
 
-    west_dat <- ms_conversions(west_dat,
-                               convert_units_from = c('SRP' = 'ug/l',
+    west_dat <- ms_conversions_(west_dat,
+                               convert_units_from = c('orthophosphate_P' = 'ug/l',
                                                       'TDP' = 'ug/l',
                                                       'NH4_N' = 'ug/l',
                                                       'NO3_NO2_N' = 'ug/l',
                                                       'TDN' = 'ug/l'),
-                               convert_units_to = c('SRP' = 'mg/l',
+                               convert_units_to = c('orthophosphate_P' = 'mg/l',
                                                     'TDP' = 'mg/l',
                                                     'NH4_N' = 'mg/l',
                                                     'NO3_NO2_N' = 'mg/l',
@@ -477,15 +501,15 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
         mutate(site = 'east_fork')
 
     east_dat <- ms_read_raw_csv(preprocessed_tibble = east_dat,
-                                datetime_cols = list('DATE' = '%Y%m%d'),
-                                datetime_tz = 'US/Eastern',
+                                datetime_cols = c('DATE' = '%Y%m%d'),
+                                datetime_tz = 'Etc/GMT+5',
                                 site_code_col = 'site',
                                 data_cols =  c('TEMP' = 'temp',
                                                'SP_COND' = 'spCond',
                                                'PH' = 'pH',
                                                'ALK' = 'alk',
                                                'DOC_CONC' = 'DOC',
-                                               'SRP_CONC' = 'SRP',
+                                               'SRP_CONC' = 'orthophosphate_P',
                                                'TDP_CONC' = 'TDP',
                                                'NH4_N_CONC' = 'NH4_N',
                                                'NO3_N_CONC' = 'NO3_NO2_N',
@@ -518,13 +542,13 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
                                                             'V7'),
                                    variable_flags_to_drop = 'DROP')
 
-    east_dat <- ms_conversions(east_dat,
-                               convert_units_from = c('SRP' = 'ug/l',
+    east_dat <- ms_conversions_(east_dat,
+                               convert_units_from = c('orthophosphate_P' = 'ug/l',
                                                       'TDP' = 'ug/l',
                                                       'NH4_N' = 'ug/l',
                                                       'NO3_NO2_N' = 'ug/l',
                                                       'TDN' = 'ug/l'),
-                               convert_units_to = c('SRP' = 'mg/l',
+                               convert_units_to = c('orthophosphate_P' = 'mg/l',
                                                     'TDP' = 'mg/l',
                                                     'NH4_N' = 'mg/l',
                                                     'NO3_NO2_N' = 'mg/l',
@@ -569,3 +593,6 @@ process_2_ms002 <- precip_gauge_from_site_data
 #. handle_errors
 process_2_ms003 <- derive_precip_pchem_pflux
 
+#stream_gauge_locations: STATUS=READY
+#. handle_errors
+process_2_ms006 <- stream_gauge_from_site_data

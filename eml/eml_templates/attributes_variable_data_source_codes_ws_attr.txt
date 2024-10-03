@@ -1,3 +1,0 @@
-attributeName	attributeDefinition	class	unit	dateTimeFormatString	missingValueCode	missingValueCodeExplanation
-data_source_code	A single letter designating the data source. This letter appears as the second character in the prefix of all watershed attribute variable codes. The prefix is separated from the variable code by an underscore.	character				
-data_source	The full name of the data source	character				

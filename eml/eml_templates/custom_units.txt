@@ -5,7 +5,7 @@ dayOfYear	dimensionless	number	1	numeric day of calendar year
 variable_unit	dimensionless	number	1	units vary. see variables_time_series.csv
 metersPerKilometer	length			m/km
 daysPerYear	number			d/yr
-day	time	second	86400	d
 degreesNorth	number			decimal degrees north (latitude)
 degreesEast	number			decimal degrees east (longitude)
 millimetersPerDay	length			mm/d
+waterYear	time			full year (365 or 366 days) beginning on October 1 and ending on September 30

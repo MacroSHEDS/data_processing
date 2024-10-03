@@ -1,16 +1,44 @@
 here is the starting place:
-	https://data.fieldsites.se/portal/#%7B%22filterCategories%22%3A%7B%22station%22%3A%5B%22Svartberget%22%5D%2C%22project%22%3A%5B%22water%22%5D%2C%22theme%22%3A%5B%22aquatic%22%2C%22atmosphere%22%5D%2C%22type%22%3A%5B%22daily-stream-discharge%22%5D%2C%22ecosystem%22%3A%5B%22coniferousForest%22%5D%7D%7D
+https://data.fieldsites.se/portal/#%7B%22filterCategories%22%3A%7B%22theme%22%3A%5B%22aquatic%22%5D%2C%22station%22%3A%5B%22Svartberget%22%5D%2C%22type%22%3A%5B%22daily-stream-discharge%22%5D%7D%7D
 
-modify the filters, then click the little button that forms a sparql query. don't export straight to csv because that will not include all records. instead modify the given query so that it returns all records. 
+ + modify the filters, then click the little button that forms a sparql query
+ + modify the query so that it returns all records (delete "limit 20" at the bottom)
+ + click the "run" triangle
+ + copy the results (now printed below the query) to a local csv. these are in file_object_collections/
+ + read the "dobj" column from the csv and download the files therein. the retrieval system is designed to do this based on the name of the file_object_collections csv
+ + check provenance_collections/ for rows to add to the citation and IR gsheet
 
-copy the results to a local csv.
-read the "dobj" column from the csv and download the files therein, using a loop. below are queries for each of the core macrosheds products.
+###########discharge#############
+
+prefix cpmeta: <http://meta.icos-cp.eu/ontologies/cpmeta/>
+prefix prov: <http://www.w3.org/ns/prov#>
+prefix xsd: <http://www.w3.org/2001/XMLSchema#>
+prefix geo: <http://www.opengis.net/ont/geosparql#>
+select ?dobj ?hasNextVersion ?spec ?fileName ?size ?submTime ?timeStart ?timeEnd
+where {
+	VALUES ?spec {<https://meta.fieldsites.se/resources/objspecs/daily-stream-discharge>}
+	?dobj cpmeta:hasObjectSpec ?spec .
+	BIND(EXISTS{[] cpmeta:isNextVersionOf ?dobj} AS ?hasNextVersion)
+	VALUES ?station {<https://meta.fieldsites.se/resources/stations/Svartberget>}
+			?dobj cpmeta:wasAcquiredBy/prov:wasAssociatedWith ?station .
+	VALUES ?site {<https://meta.fieldsites.se/resources/sites/kallkalsbacken-forest> <https://meta.fieldsites.se/resources/sites/kallkalsmyren-forest> <https://meta.fieldsites.se/resources/sites/ovre-krycklan-forest> <https://meta.fieldsites.se/resources/sites/nyangesbacken-forest> <https://meta.fieldsites.se/resources/sites/ahedbacken-forest> <https://meta.fieldsites.se/resources/sites/vastrabacken-forest> <https://meta.fieldsites.se/resources/sites/krycklan-forest> <https://meta.fieldsites.se/resources/sites/stortjarnbacken-forest> <https://meta.fieldsites.se/resources/sites/degero-mire> <https://meta.fieldsites.se/resources/sites/langbacken-forest>}
+				?dobj cpmeta:wasAcquiredBy/cpmeta:wasPerformedAt ?site .
+	?dobj cpmeta:hasSizeInBytes ?size .
+?dobj cpmeta:hasName ?fileName .
+?dobj cpmeta:wasSubmittedBy/prov:endedAtTime ?submTime .
+?dobj cpmeta:hasStartTime | (cpmeta:wasAcquiredBy / prov:startedAtTime) ?timeStart .
+?dobj cpmeta:hasEndTime | (cpmeta:wasAcquiredBy / prov:endedAtTime) ?timeEnd .
+	FILTER NOT EXISTS {[] cpmeta:isNextVersionOf ?dobj}
+}
+order by ?fileName
+offset 0
 
 ###########stream_chemistry#############
 
 prefix cpmeta: <http://meta.icos-cp.eu/ontologies/cpmeta/>
 prefix prov: <http://www.w3.org/ns/prov#>
 prefix xsd: <http://www.w3.org/2001/XMLSchema#>
+prefix geo: <http://www.opengis.net/ont/geosparql#>
 select ?dobj ?hasNextVersion ?spec ?fileName ?size ?submTime ?timeStart ?timeEnd
 where {
 	VALUES ?spec {<https://meta.fieldsites.se/resources/objspecs/chemical-variables-stream>}
@@ -18,7 +46,7 @@ where {
 	BIND(EXISTS{[] cpmeta:isNextVersionOf ?dobj} AS ?hasNextVersion)
 	VALUES ?station {<https://meta.fieldsites.se/resources/stations/Svartberget>}
 			?dobj cpmeta:wasAcquiredBy/prov:wasAssociatedWith ?station .
-	VALUES ?site {<https://meta.fieldsites.se/resources/sites/kallkalsbacken-forest> <https://meta.fieldsites.se/resources/sites/stortjarnbacken-forest> <https://meta.fieldsites.se/resources/sites/risbacken-forest> <https://meta.fieldsites.se/resources/sites/kallkalsmyren-forest> <https://meta.fieldsites.se/resources/sites/langbacken-forest> <https://meta.fieldsites.se/resources/sites/nyangesbacken-forest> <https://meta.fieldsites.se/resources/sites/krycklan-forest> <https://meta.fieldsites.se/resources/sites/vastrabacken-forest>}
+	VALUES ?site {<https://meta.fieldsites.se/resources/sites/kallkalsbacken-forest> <https://meta.fieldsites.se/resources/sites/degero-mire> <https://meta.fieldsites.se/resources/sites/stortjarnbacken-forest> <https://meta.fieldsites.se/resources/sites/risbacken-forest> <https://meta.fieldsites.se/resources/sites/lillmyrbacken-forest> <https://meta.fieldsites.se/resources/sites/stormyrbacken-forest> <https://meta.fieldsites.se/resources/sites/kallkalsmyren-forest> <https://meta.fieldsites.se/resources/sites/nymyrbacken-forest> <https://meta.fieldsites.se/resources/sites/langbacken-forest> <https://meta.fieldsites.se/resources/sites/nyangesbacken-forest> <https://meta.fieldsites.se/resources/sites/ovre-krycklan-forest> <https://meta.fieldsites.se/resources/sites/krycklan-forest> <https://meta.fieldsites.se/resources/sites/ahedbacken-forest> <https://meta.fieldsites.se/resources/sites/vastrabacken-forest>}
 				?dobj cpmeta:wasAcquiredBy/cpmeta:wasPerformedAt ?site .
 	?dobj cpmeta:hasSizeInBytes ?size .
 ?dobj cpmeta:hasName ?fileName .
@@ -28,4 +56,33 @@ where {
 	FILTER NOT EXISTS {[] cpmeta:isNextVersionOf ?dobj}
 }
 order by desc(?submTime)
+offset 0
+
+
+###########precipitation#############
+#this is pretty custom. ignores kulbackslyden and sub-daily from stortjarn
+note that the files in this system can change with the wind, just like any other domain, despite the fancy database interface
+
+prefix cpmeta: <http://meta.icos-cp.eu/ontologies/cpmeta/>
+prefix prov: <http://www.w3.org/ns/prov#>
+prefix xsd: <http://www.w3.org/2001/XMLSchema#>
+prefix geo: <http://www.opengis.net/ont/geosparql#>
+select ?dobj ?hasNextVersion ?spec ?fileName ?size ?submTime ?timeStart ?timeEnd
+where {
+	VALUES ?spec {<https://meta.fieldsites.se/resources/objspecs/stationHourlyMeteorological> <https://meta.fieldsites.se/resources/objspecs/stationDailyMeteorological> <https://meta.fieldsites.se/resources/objspecs/waterDailyMeteorological>}
+	?dobj cpmeta:hasObjectSpec ?spec .
+	BIND(EXISTS{[] cpmeta:isNextVersionOf ?dobj} AS ?hasNextVersion)
+	VALUES ?station {<https://meta.fieldsites.se/resources/stations/Svartberget>}
+			?dobj cpmeta:wasAcquiredBy/prov:wasAssociatedWith ?station .
+	VALUES ?site {<https://meta.fieldsites.se/resources/sites/svartberget-forest> <https://meta.fieldsites.se/resources/sites/degero-mire> <https://meta.fieldsites.se/resources/sites/stortjarn-lake>}
+				?dobj cpmeta:wasAcquiredBy/cpmeta:wasPerformedAt ?site .
+	?dobj cpmeta:hasSizeInBytes ?size .
+?dobj cpmeta:hasName ?fileName .
+?dobj cpmeta:wasSubmittedBy/prov:endedAtTime ?submTime .
+?dobj cpmeta:hasStartTime | (cpmeta:wasAcquiredBy / prov:startedAtTime) ?timeStart .
+?dobj cpmeta:hasEndTime | (cpmeta:wasAcquiredBy / prov:endedAtTime) ?timeEnd .
+	FILTER NOT EXISTS {[] cpmeta:isNextVersionOf ?dobj}
+		VALUES ?spec {<https://meta.fieldsites.se/resources/objspecs/stationHourlyMeteorological> <https://meta.fieldsites.se/resources/objspecs/stationDailyMeteorological> <https://meta.fieldsites.se/resources/objspecs/waterDailyMeteorological>}
+}
+order by ?fileName
 offset 0

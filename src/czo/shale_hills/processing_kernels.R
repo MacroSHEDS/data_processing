@@ -17,23 +17,23 @@ process_0_VERSIONLESS001 <- function(set_details, network, domain){
     )
 
     response <- POST(url, body = params)
-    writeBin(content(response, 'raw'), 'data/czo/shale_hills/raw/discharge__VERSIONLESS001/sitecode_NA/SH_Discharge_Level_1.csv')
+    writeBin(content(response, 'raw'), 'data/czo/shale_hills/raw/discharge__VERSIONLESS001/sitename_NA/SH_Discharge_Level_1.csv')
 
     params$tableName <- params$fileName <- 'SCAL_Discharge_Level_1'
     response <- POST(url, body = params)
-    writeBin(content(response, 'raw'), 'data/czo/shale_hills/raw/discharge__VERSIONLESS001/sitecode_NA/SCAL_Discharge_Level_1.csv')
+    writeBin(content(response, 'raw'), 'data/czo/shale_hills/raw/discharge__VERSIONLESS001/sitename_NA/SCAL_Discharge_Level_1.csv')
 
     params$tableName <- params$fileName <- 'SC_outlet'
     response <- POST(url, body = params)
-    writeBin(content(response, 'raw'), 'data/czo/shale_hills/raw/discharge__VERSIONLESS001/sitecode_NA/SC_outlet.csv')
+    writeBin(content(response, 'raw'), 'data/czo/shale_hills/raw/discharge__VERSIONLESS001/sitename_NA/SC_outlet.csv')
 
     params$tableName <- params$fileName <- 'SCCF_Q_ec'
     response <- POST(url, body = params)
-    writeBin(content(response, 'raw'), 'data/czo/shale_hills/raw/discharge__VERSIONLESS001/sitecode_NA/SCCF_Q_ec.csv')
+    writeBin(content(response, 'raw'), 'data/czo/shale_hills/raw/discharge__VERSIONLESS001/sitename_NA/SCCF_Q_ec.csv')
 
     params$tableName <- params$fileName <- 'GR_Discharge_Level_1'
     response <- POST(url, body = params)
-    writeBin(content(response, 'raw'), 'data/czo/shale_hills/raw/discharge__VERSIONLESS001/sitecode_NA/GR_Discharge_Level_1.csv')
+    writeBin(content(response, 'raw'), 'data/czo/shale_hills/raw/discharge__VERSIONLESS001/sitename_NA/GR_Discharge_Level_1.csv')
 
     url <- 'http://www.czo.psu.edu/data_strmflw-sh.php'
 
@@ -48,7 +48,7 @@ process_0_VERSIONLESS001 <- function(set_details, network, domain){
     )
 
     response <- POST(url, body = params)
-    writeBin(content(response, 'raw'), 'data/czo/shale_hills/raw/discharge__VERSIONLESS001/sitecode_NA/export.csv')
+    writeBin(content(response, 'raw'), 'data/czo/shale_hills/raw/discharge__VERSIONLESS001/sitename_NA/export.csv')
 
     deets_out <- generate_retrieval_details('http://www.czo.psu.edu/data_time_series.html')
 
@@ -71,11 +71,11 @@ process_0_VERSIONLESS002 <- function(set_details, network, domain){
     )
 
     response <- POST(url, body = params)
-    writeBin(content(response, 'raw'), 'data/czo/shale_hills/raw/precipitation__VERSIONLESS002/sitecode_NA/Level1_Precip_Daily.csv')
+    writeBin(content(response, 'raw'), 'data/czo/shale_hills/raw/precipitation__VERSIONLESS002/sitename_NA/Level1_Precip_Daily.csv')
 
     params$tableName <- params$fileName <- 'SP_Thru_Precip_Daily_L1'
     response <- POST(url, body = params)
-    writeBin(content(response, 'raw'), 'data/czo/shale_hills/raw/precipitation__VERSIONLESS002/sitecode_NA/SP_Thru_Precip_Daily_L1.csv')
+    writeBin(content(response, 'raw'), 'data/czo/shale_hills/raw/precipitation__VERSIONLESS002/sitename_NA/SP_Thru_Precip_Daily_L1.csv')
 
     deets_out <- generate_retrieval_details('http://www.czo.psu.edu/data_time_series.html')
 
@@ -114,7 +114,7 @@ process_0_VERSIONLESS003 <- function(set_details, network, domain){
 
     for(f in known_files){
         download.file(glue('http://www.czo.psu.edu/downloads/{f}'),
-                      glue('data/czo/shale_hills/raw/stream_chemistry__VERSIONLESS003/sitecode_NA/{f}'))
+                      glue('data/czo/shale_hills/raw/stream_chemistry__VERSIONLESS003/sitename_NA/{f}'))
     }
 
     deets_out <- generate_retrieval_details('http://www.czo.psu.edu/downloads/')
@@ -126,7 +126,8 @@ process_0_VERSIONLESS003 <- function(set_details, network, domain){
 
 #discharge: STATUS=READY
 #. handle_errors
-process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, component) {
+process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code,
+                                     component){
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}',
                     n = network,
@@ -145,7 +146,7 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
             mutate(site = 'SH_weir')
 
         shs1 <- ms_read_raw_csv(preprocessed_tibble = shs1,
-                                datetime_cols = list('TmStamp' = '%Y-%m-%d %H:%M:%S'),
+                                datetime_cols = c('TmStamp' = '%Y-%m-%d %H:%M:%S'),
                                 datetime_tz = 'America/New_York',
                                 site_code_col = 'site',
                                 data_cols =  c('Discharge' = 'discharge'),
@@ -175,7 +176,7 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
             mutate(site = 'SH_weir')
 
         shs2 <- ms_read_raw_csv(preprocessed_tibble = shs2,
-                                datetime_cols = list('TmStamp_UTC' = '%Y-%m-%d %H:%M:%S'),
+                                datetime_cols = c('TmStamp_UTC' = '%Y-%m-%d %H:%M:%S'),
                                 datetime_tz = 'UTC',
                                 site_code_col = 'site',
                                 data_cols =  c('dischg_m3s' = 'discharge'),
@@ -200,7 +201,7 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
             mutate(site = 'SCAL')
 
         sc_ablake <- ms_read_raw_csv(preprocessed_tibble = sc_ablake,
-                                datetime_cols = list('TmStamp_UTC' = '%Y-%m-%d %H:%M:%S'),
+                                datetime_cols = c('TmStamp_UTC' = '%Y-%m-%d %H:%M:%S'),
                                 datetime_tz = 'UTC',
                                 site_code_col = 'site',
                                 data_cols =  c('dischg_m3s' = 'discharge'),
@@ -221,7 +222,7 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
             mutate(site = 'SCO')
 
         sc_outlet <- ms_read_raw_csv(preprocessed_tibble = sc_outlet,
-                                     datetime_cols = list('TmStamp_UTC' = '%Y-%m-%d %H:%M:%S'),
+                                     datetime_cols = c('TmStamp_UTC' = '%Y-%m-%d %H:%M:%S'),
                                      datetime_tz = 'UTC',
                                      site_code_col = 'site',
                                      data_cols =  c('dischg_m3s' = 'discharge'),
@@ -242,7 +243,7 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
             mutate(site = 'GRO')
 
         gr <- ms_read_raw_csv(preprocessed_tibble = gr,
-                                     datetime_cols = list('TmStamp_UTC' = '%Y-%m-%d %H:%M:%S'),
+                                     datetime_cols = c('TmStamp_UTC' = '%Y-%m-%d %H:%M:%S'),
                                      datetime_tz = 'UTC',
                                      site_code_col = 'site',
                                      data_cols =  c('dischg_m3s' = 'discharge'),
@@ -263,7 +264,7 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
             mutate(site = 'SCCF')
 
         sccf <- ms_read_raw_csv(preprocessed_tibble = sccf,
-                                datetime_cols = list('TmStamp_UTC' = '%Y-%m-%d %H:%M:%S'),
+                                datetime_cols = c('TmStamp_UTC' = '%Y-%m-%d %H:%M:%S'),
                                 datetime_tz = 'UTC',
                                 site_code_col = 'site',
                                 data_cols =  c('dischg_m3s' = 'discharge'),
@@ -306,7 +307,8 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
 
 #precipitation: STATUS=READY
 #. handle_errors
-process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, component) {
+process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code,
+                                     component){
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}',
                     n = network,
@@ -324,19 +326,20 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
         mutate(site = 'NRT')
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('TmStamp' = '%Y-%m-%d %H:%M:%S'),
+                         datetime_cols = c('TmStamp' = '%Y-%m-%d %H:%M:%S'),
                          datetime_tz = 'America/New_York',
                          site_code_col = 'site',
                          data_cols =  c('Total_Precip_mm' = 'precipitation'),
                          data_col_pattern = '#V#',
                          summary_flagcols = 'Comment',
-                         is_sensor = TRUE)
+                         is_sensor = TRUE,
+                         keep_empty_rows = TRUE)
 
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA,
                             summary_flags_clean = list(Comment = ''),
-                            summary_flags_to_drop = list(Comment = c('Device data missing',
-                                                                     'value removed - cleaned')))
+                            summary_flags_to_drop = list(Comment = 'sentinel'),
+                            keep_empty_rows = TRUE)
 
     #South Planar (3 sites)
     f <- grep('SP_Thru', all_p_files, value = TRUE)
@@ -355,25 +358,29 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
     }
 
     d2 <- ms_read_raw_csv(preprocessed_tibble = d2,
-                          datetime_cols = list('TmStamp' = '%Y-%m-%d %H:%M:%S'),
+                          datetime_cols = c('TmStamp' = '%Y-%m-%d %H:%M:%S'),
                           datetime_tz = 'America/New_York',
                           site_code_col = 'site',
                           data_cols =  c('mm' = 'precipitation'),
                           data_col_pattern = '#V#',
                           summary_flagcols = 'flag',
-                          is_sensor = TRUE)
+                          is_sensor = TRUE,
+                          keep_empty_rows = TRUE)
 
     d2 <- ms_cast_and_reflag(d2,
                              varflag_col_pattern = NA,
                              summary_flags_clean = list(flag = ''),
-                             summary_flags_to_drop = list(flag = '#*#'))
+                             summary_flags_to_drop = list(flag = 'sentinel'),
+                             keep_empty_rows = TRUE)
 
     #combine and write
     d <- bind_rows(d, d2)
 
     d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
-    d <- synchronize_timestep(d)
+    d <- synchronize_timestep(d,
+                              admit_NAs = TRUE,
+                              allow_pre_interp = TRUE)
 
     for(s in unique(d$site_code)){
 
@@ -394,7 +401,7 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
 
 #stream_chemistry: STATUS=READY
 #. handle_errors
-process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, component) {
+process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, component){
 
     rawfile <- glue('data/{n}/{d}/raw/{p}/{s}',
                     n = network,
@@ -408,7 +415,7 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
     h6 <- readxl::read_xlsx(h6_f)
 
     h6 <- ms_read_raw_csv(preprocessed_tibble = h6,
-                          datetime_cols = list('Date' = '%Y-%m-%d'),
+                          datetime_cols = c('Date' = '%Y-%m-%d'),
                           datetime_tz = 'America/New_York',
                           site_code_col = 'Site',
                           alt_site_code = list('SH_weir' = c('SSHCZO-WIER', 'SH-WEIR'),
@@ -432,30 +439,17 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
                                          'Si  (umol L-1)' = 'Si',
                                          'Sr (umol L-1)' = 'Sr',
                                          'Ba (\u03bcmol L-1)' = 'Ba',
-                                         'P (\u03bcmol L-1)' = 'P',
+                                         'P (\u03bcmol L-1)' = 'TP',
                                          'Zn (\u03bcmol L-1)' = 'Zn'),
                           data_col_pattern = '#V#',
                           is_sensor = FALSE,
                           set_to_NA = c('n/a', 'DOI'),
                           convert_to_BDL_flag = c('BDL', '<3.2', 'bd'))
 
-    # For some reason a few flag columns are being created as "character" columns
-    # and the others are "chr". When the tables goes into ms_cast_and_reflag
-    # It causes an error. Mutating them with as.character seems to fix this issue,
-    # should watch at other sites. (RESOLVED in ms_read_raw_csv)
-
-    # h6 <- h6 %>%
-    #     mutate(across(.cols = contains('flg'), ~ as.character(.x)))
-
-    # h6 <- ms_cast_and_reflag(h6,
-    #                          varflag_col_pattern = NA)
-
     h6 <- ms_cast_and_reflag(d = h6,
-                             variable_flags_dirty = 'DIRTY',
-                             variable_flags_bdl = c('BDL'),
-                             variable_flags_to_drop = 'DROP')
+                             variable_flags_bdl = c('BDL'))
 
-    h6 <- ms_conversions(h6,
+    h6 <- ms_conversions_(h6,
                          convert_units_from = c('F' = 'umol/l',
                                                'Cl' = 'umol/l',
                                                'SO4' = 'umol/l',
@@ -470,7 +464,7 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
                                                'Si' = 'umol/l',
                                                'Sr' = 'umol/l',
                                                'Ba' = 'umol/l',
-                                               'P' = 'umol/l',
+                                               'TP' = 'umol/l',
                                                'Zn' = 'umol/l'),
                         convert_units_to = c('F' = 'mg/l',
                                              'Cl' = 'mg/l',
@@ -486,29 +480,44 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
                                              'Si' = 'mg/l',
                                              'Sr' = 'mg/l',
                                              'Ba' = 'mg/l',
-                                             'P' = 'mg/l',
+                                             'TP' = 'mg/l',
                                              'Zn' = 'mg/l'))
 
     doi_f2014 <- grep('SC_2014StreamwaterChemistry_DOI', chem_files, value = TRUE)
-    doi2014 <- readxl::read_xlsx(doi_f2014, sheet = '3 Data', skip = 1) %>%
+
+    header <- sm(readxl::read_xlsx(doi_f2014, sheet = '3 Data', skip = 1, n_max = 3))
+    header <- colnames(header)
+    if(header[1] != '...1' || header[12] != 'Alkalinity' || header[7] != 'Temperature'){
+        stop('there has been a change')
+    }
+
+    doi2014 <- sm(readxl::read_xlsx(doi_f2014,
+                                    sheet = '3 Data',
+                                    skip = 1)) %>%
         rename(id = 1)
-    doi_dates <- readxl::read_xlsx(doi_f2014, sheet = '2 Samples', skip = 1) %>%
-        select(id = IDENTIFICATION, date = ...12) %>%
-        mutate(date = as_date(as.numeric(date), origin = '1900-01-01')) %>%
-        filter(!is.na(date))
+
+    header <- sm(readxl::read_xlsx(doi_f2014, sheet = '2 Samples', skip = 1, n_max = 3))
+    header <- colnames(header)
+    if(header[1] != 'IDENTIFICATION' || header[12] != '...12' || header[7] != 'DESCRIPTION'){
+        stop('there has been a change')
+    }
+
+    doi_dates <- sm(readxl::read_xlsx(doi_f2014,
+                                      sheet = '2 Samples',
+                                      skip = 6)) %>%
+        select(id = ...1, date = ...12)
 
     doi_names <- names(doi2014)
-    doi_names <- doi_names[!grepl('[.][.][.]|PARAMETER', doi_names)]
+    doi_names <- doi_names[! grepl('\\.{3}|PARAMETER', doi_names)]
 
-    doi2014 <- doi2014 %>%
-        select(doi_names)
+    doi2014 <- select(doi2014, all_of(doi_names))
 
     doi_com <- full_join(doi_dates, doi2014, by = 'id') %>%
-        mutate(name = str_split_fixed(id, '_', n= Inf)[,1]) %>%
-        filter(!is.na(date))
+        filter(! is.na(date)) %>%
+        mutate(name = str_split_fixed(id, '_', n= Inf)[, 1])
 
     d_2014 <- ms_read_raw_csv(preprocessed_tibble = doi_com,
-                              datetime_cols = list('date' = '%Y-%m-%d'),
+                              datetime_cols = c('date' = '%Y-%m-%d'),
                               datetime_tz = 'America/New_York',
                               site_code_col = 'name',
                               alt_site_code = list('SH_weir' = c('SH')),
@@ -536,11 +545,9 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
                               is_sensor = FALSE)
 
     d_2014 <- ms_cast_and_reflag(d = d_2014,
-                                 variable_flags_dirty = 'DIRTY',
-                                 variable_flags_bdl = c('BDL'),
-                                 variable_flags_to_drop = 'DROP')
+                                 variable_flags_bdl = c('BDL'))
 
-    d_2014 <- ms_conversions(d_2014,
+    d_2014 <- ms_conversions_(d_2014,
                          convert_units_from = c('Cl' = 'umol/l',
                                                 'SO4' = 'umol/l',
                                                 'NO3' = 'umol/l',
@@ -571,8 +578,8 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
     sw_all <- tibble()
     for(i in 1:length(sw_data_f)){
 
-        sw_data <- readxl::read_xlsx(sw_data_f[i], 'Data',
-                                     col_types = 'text') %>%
+        sw_data <- sm(readxl::read_xlsx(sw_data_f[i], 'Data',
+                                        col_types = 'text')) %>%
             rename(Cl = starts_with('Cl-'),
                    NO3 = starts_with('NO3-'),
                    SO4 = starts_with('SO42-'),
@@ -594,27 +601,26 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
             mutate(Sample_Date = as_date(as.numeric(Sample_Date), origin = '1900-01-01'))
 
         sw_data <- ms_read_raw_csv(preprocessed_tibble = sw_data,
-                                   datetime_cols = list('Sample_Date' = '%Y-%m-%d'),
+                                   datetime_cols = c('Sample_Date' = '%Y-%m-%d'),
                                    datetime_tz = 'America/New_York',
                                    site_code_col = 'Sample Name',
-                                   alt_site_code = list('SH_weir' = c('SW', 'SW_ISCO'),
-                                                        'SH_headwaters' = 'SH',
-                                                        'SH_middle' = 'SM'),
+                                   #combining SW and SW_ISCO results in 151 replications that get averaged.
+                                   alt_site_code = list('SH_weir' = c('SW', 'SW_ISCO')),
+                                                        # 'SH_headwaters' = 'SH',
+                                                        # 'SH_middle' = 'SM'),
                                    data_cols =  c('DOC (ppm)' = 'DOC',
                                                   'Water Temp.  (°C)' = 'temp',
                                                   'pH', 'Cl', 'NO3', 'SO4', 'F',
                                                   'Al', 'Ca', 'K', 'Mg', 'Na',
                                                   'Si', 'Sr', 'Fe', 'Mn', 'Ni',
-                                                  'P', 'V', 'Zn', 'Ba'),
+                                                  'P' = 'TP', 'V', 'Zn', 'Ba'),
                                    data_col_pattern = '#V#',
                                    convert_to_BDL_flag = 'BDL',
                                    is_sensor = FALSE)
 
         if(any(str_detect('__|flg', colnames(sw_data)))){
             sw_data <- ms_cast_and_reflag(d = sw_data,
-                                          variable_flags_dirty = 'DIRTY',
-                                          variable_flags_bdl = c('BDL'),
-                                          variable_flags_to_drop = 'DROP')
+                                          variable_flags_bdl = c('BDL'))
         } else{
             sw_data <- ms_cast_and_reflag(d = sw_data,
                                           varflag_col_pattern = NA)
@@ -623,7 +629,7 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
         sw_all <- rbind(sw_all, sw_data)
     }
 
-    sw_all <- ms_conversions(sw_all,
+    sw_all <- ms_conversions_(sw_all,
                              convert_units_from = c('Cl' = 'umol/l',
                                                     'NO3' = 'umol/l',
                                                     'SO4' = 'umol/l',
@@ -638,7 +644,7 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
                                                     'Fe' = 'umol/l',
                                                     'Mn' = 'umol/l',
                                                     'Ni' = 'umol/l',
-                                                    'P' = 'umol/l',
+                                                    'TP' = 'umol/l',
                                                     'V' = 'umol/l',
                                                     'Zn' = 'umol/l',
                                                     'Ba' = 'umol/l'),
@@ -656,7 +662,7 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
                                                   'Fe' = 'mg/l',
                                                   'Mn' = 'mg/l',
                                                   'Ni' = 'mg/l',
-                                                  'P' = 'mg/l',
+                                                  'TP' = 'mg/l',
                                                   'V' = 'mg/l',
                                                   'Zn' = 'mg/l',
                                                   'Ba' = 'mg/l'))
@@ -699,3 +705,7 @@ process_2_ms002 <- derive_stream_flux
 #precip_pchem_pflux: STATUS=READY
 #. handle_errors
 process_2_ms003 <- derive_precip_pchem_pflux
+
+#stream_gauge_locations: STATUS=READY
+#. handle_errors
+process_2_ms006 <- stream_gauge_from_site_data

@@ -37,4 +37,6 @@ misc_backups
 eml/data_links_truncated
 eml/data_links_old_justforreference/
 *.Rproj
-
+*.swp
+scratch/
+src/dev/camels_formatting_workspace/obsolete/

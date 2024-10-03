@@ -1,4 +1,4 @@
-retrieve_plum <- function(set_details, network, domain) {
+retrieve_plum <- function(set_details, network, domain){
 
     download_raw_file(network = network,
                       domain = domain,
@@ -21,8 +21,7 @@ ipswich_dam <- c(444, 445, 446, 447, 513, 514, 448, 532, 533, 534)
 governors_academy <- c(68, 69, 70, 140, 141, 142, 143)
 mbl_marshview <- c(67, 179, 180, 181, 239, 359, 385, 417, 423, 496, 542, 162, 343)
 
-munge_plum_combined <- function(network, domain, prodname_ms, site_code,
-                                component){
+munge_plum_combined <- function(network, domain, prodname_ms, site_code, component){
 
     rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}',
                    n = network,
@@ -47,9 +46,9 @@ munge_plum_combined <- function(network, domain, prodname_ms, site_code,
     if(grepl('stream_chemistry', prodname_ms)) {
 
         d <- ms_read_raw_csv(preprocessed_tibble = d,
-                             datetime_cols = list('Date' = '%Y-%m-%d',
+                             datetime_cols = c('Date' = '%Y-%m-%d',
                                                   'Time' = '%H:%M'),
-                             datetime_tz = 'US/Eastern',
+                             datetime_tz = 'Etc/GMT+5',
                              site_code_col = 'site_code',
                              data_cols =  c('Temp' = 'temp',
                                             'SpCond' = 'spCond',
@@ -63,7 +62,7 @@ munge_plum_combined <- function(network, domain, prodname_ms, site_code,
         d <- ms_cast_and_reflag(d,
                                 varflag_col_pattern = NA)
 
-        d <- ms_conversions(d,
+        d <- ms_conversions_(d,
                             convert_units_from = c('spCond' = 'mS/cm'),
                             convert_units_to = c('spCond' = 'uS/cm'))
 
@@ -76,9 +75,9 @@ munge_plum_combined <- function(network, domain, prodname_ms, site_code,
         }
 
         d <- ms_read_raw_csv(preprocessed_tibble = d,
-                             datetime_cols = list('Date' = '%Y-%m-%d',
+                             datetime_cols = c('Date' = '%Y-%m-%d',
                                                   'Time' = '%H:%M'),
-                             datetime_tz = 'US/Eastern',
+                             datetime_tz = 'Etc/GMT+5',
                              site_code_col = 'site_code',
                              data_cols =  c('Discharge' = 'discharge'),
                              data_col_pattern = '#V#',
@@ -93,8 +92,7 @@ munge_plum_combined <- function(network, domain, prodname_ms, site_code,
     return(d)
 }
 
-munge_plum_temp_q <- function(network, domain, prodname_ms, site_code,
-                                component){
+munge_plum_temp_q <- function(network, domain, prodname_ms, site_code, component){
 
     rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}',
                    n = network,
@@ -119,9 +117,9 @@ munge_plum_temp_q <- function(network, domain, prodname_ms, site_code,
     if(grepl('stream_chemistry', prodname_ms)) {
 
         d <- ms_read_raw_csv(preprocessed_tibble = d,
-                             datetime_cols = list('Date' = '%Y-%m-%d',
+                             datetime_cols = c('Date' = '%Y-%m-%d',
                                                   'Time' = '%H:%M'),
-                             datetime_tz = 'US/Eastern',
+                             datetime_tz = 'Etc/GMT+5',
                              site_code_col = 'site_code',
                              data_cols =  c('Temp' = 'temp'),
                              data_col_pattern = '#V#',
@@ -131,15 +129,19 @@ munge_plum_temp_q <- function(network, domain, prodname_ms, site_code,
     } else {
 
         d <- ms_read_raw_csv(preprocessed_tibble = d,
-                             datetime_cols = list('Date' = '%Y-%m-%d',
+                             datetime_cols = c('Date' = '%Y-%m-%d',
                                                   'Time' = '%H:%M'),
-                             datetime_tz = 'US/Eastern',
+                             datetime_tz = 'Etc/GMT+5',
                              site_code_col = 'site_code',
                              data_cols =  c('Discharge' = 'discharge'),
                              data_col_pattern = '#V#',
                              is_sensor = TRUE,
                              sampling_type = 'I')
+    }
 
+    if(code == '173'){
+        #2007 mistakenly included in a file for 2008
+        d <- filter(d, year(datetime) != 2007)
     }
 
     d <- ms_cast_and_reflag(d,
@@ -148,8 +150,7 @@ munge_plum_temp_q <- function(network, domain, prodname_ms, site_code,
     return(d)
 }
 
-munge_plum_temp_cond <- function(network, domain, prodname_ms, site_code,
-                              component) {
+munge_plum_temp_cond <- function(network, domain, prodname_ms, site_code, component){
 
     rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}',
                    n = network,
@@ -172,9 +173,9 @@ munge_plum_temp_cond <- function(network, domain, prodname_ms, site_code,
         mutate(site_code = !!site)
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('DATE' = '%Y-%m-%d',
+                         datetime_cols = c('DATE' = '%Y-%m-%d',
                                               'Time' = '%H:%M'),
-                         datetime_tz = 'US/Eastern',
+                         datetime_tz = 'Etc/GMT+5',
                          site_code_col = 'site_code',
                          data_cols =  c('Temperature' = 'temp',
                                         'Sp_Cond' = 'spCond'),
@@ -191,8 +192,7 @@ munge_plum_temp_cond <- function(network, domain, prodname_ms, site_code,
     return(d)
 }
 
-munge_plum_temp_cond_cart <- function(network, domain, prodname_ms, site_code,
-                                 component) {
+munge_plum_temp_cond_cart <- function(network, domain, prodname_ms, site_code, component){
 
     rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}',
                    n = network,
@@ -215,9 +215,9 @@ munge_plum_temp_cond_cart <- function(network, domain, prodname_ms, site_code,
         mutate(site_code = !!site)
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('Date' = '%Y-%m-%d',
+                         datetime_cols = c('Date' = '%Y-%m-%d',
                                               'Time' = '%H:%M'),
-                         datetime_tz = 'US/Eastern',
+                         datetime_tz = 'Etc/GMT+5',
                          site_code_col = 'site_code',
                          data_cols =  c('Temp' = 'temp',
                                         'Sp_Cond' = 'spCond'),
@@ -234,8 +234,7 @@ munge_plum_temp_cond_cart <- function(network, domain, prodname_ms, site_code,
     return(d)
 }
 
-munge_plum_temp_do <- function(network, domain, prodname_ms, site_code,
-                                 component) {
+munge_plum_temp_do <- function(network, domain, prodname_ms, site_code, component){
 
     rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}',
                    n = network,
@@ -258,9 +257,9 @@ munge_plum_temp_do <- function(network, domain, prodname_ms, site_code,
         mutate(site_code = !!site)
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('Date' = '%Y-%m-%d',
+                         datetime_cols = c('Date' = '%Y-%m-%d',
                                               'Time' = '%H:%M'),
-                         datetime_tz = 'US/Eastern',
+                         datetime_tz = 'Etc/GMT+5',
                          site_code_col = 'site_code',
                          data_cols =  c('Temp' = 'temp',
                                         'DO_Concentration' = 'DO',
@@ -278,8 +277,7 @@ munge_plum_temp_do <- function(network, domain, prodname_ms, site_code,
     return(d)
 }
 
-munge_precip <- function(network, domain, prodname_ms, site_code,
-                         component){
+munge_precip <- function(network, domain, prodname_ms, site_code, component){
 
     rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}',
                    n = network,
@@ -306,22 +304,23 @@ munge_precip <- function(network, domain, prodname_ms, site_code,
                Time = paste(hour, minute, sep = ':'))
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('Date' = '%d-%b-%Y',
+                         datetime_cols = c('Date' = '%d-%b-%Y',
                                               'Time' = '%H:%M'),
-                         datetime_tz = 'US/Eastern',
+                         datetime_tz = 'Etc/GMT+5',
                          site_code_col = 'site_code',
                          data_cols =  c('Precip' = 'precipitation'),
                          data_col_pattern = '#V#',
-                         is_sensor = TRUE)
+                         is_sensor = TRUE,
+                         keep_empty_rows = TRUE)
 
     d <- ms_cast_and_reflag(d,
-                            varflag_col_pattern = NA)
+                            varflag_col_pattern = NA,
+                            keep_empty_rows = TRUE)
 
     return(d)
 }
 
-munge_precip_alt <- function(network, domain, prodname_ms, site_code,
-                         component){
+munge_precip_alt <- function(network, domain, prodname_ms, site_code, component){
 
     rawfile = glue('data/{n}/{d}/raw/{p}/{s}/{c}',
                    n = network,
@@ -339,16 +338,18 @@ munge_precip_alt <- function(network, domain, prodname_ms, site_code,
         mutate(site_code = !!site)
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('Date' = '%Y-%m-%d',
+                         datetime_cols = c('Date' = '%Y-%m-%d',
                                               'Time' = '%H:%M'),
-                         datetime_tz = 'US/Eastern',
+                         datetime_tz = 'Etc/GMT+5',
                          site_code_col = 'site_code',
                          data_cols =  c('Precip' = 'precipitation'),
                          data_col_pattern = '#V#',
-                         is_sensor = TRUE)
+                         is_sensor = TRUE,
+                         keep_empty_rows = TRUE)
 
     d <- ms_cast_and_reflag(d,
-                            varflag_col_pattern = NA)
+                            varflag_col_pattern = NA,
+                            keep_empty_rows = TRUE)
 
     return(d)
 }

@@ -18,7 +18,7 @@ if(! is.null(prodname_filter)){
 
 if(nrow(prod_info) == 0) return()
 
-site_code <- 'sitecode_NA'
+site_code <- 'sitename_NA'
 
 for(i in seq_len(nrow(prod_info))){
 
@@ -105,6 +105,17 @@ for(i in seq_len(nrow(prod_info))){
     dir.create(path = dest_dir,
                showWarnings = FALSE,
                recursive = TRUE)
+
+    retrieval_s <- held_data[[prodname_ms]][['sitename_NA']][['retrieve']][['status']]
+
+    if(retrieval_s == 'ok'){
+        loginfo(glue('Nothing to do for {s} {p}',
+                     s=site_code, p=prodname_ms), logger=logger_module)
+        next
+    } else {
+        loginfo(glue('Retrieving {s} {p}',
+                     s=site_code, p=prodname_ms), logger=logger_module)
+    }
 
     retrieve_versionless_product(network = network,
                                  domain = domain,

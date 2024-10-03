@@ -1,5 +1,5 @@
 loginfo('Beginning derive', logger=logger_module)
-site_code <- 'sitecode_NA' #sites handled idiosyncratically within kernels
+site_code <- 'sitename_NA' #sites handled idiosyncratically within kernels
 
 prod_info <- get_product_info(network = network,
                              domain = domain,

@@ -6,13 +6,17 @@ MacroSheds data portal
 
 ⠀⠀⠀⠀https://macrosheds.org
 
+"macrosheds" R package
+
+    https://github.com/MacroSHEDS/macrosheds
+
+MacroSheds data paper
+
+⠀⠀⠀⠀https://aslopubs.onlinelibrary.wiley.com/doi/full/10.1002/lol2.10325
+
 MacroSheds code
 
 ⠀⠀⠀⠀https://github.com/MacroSHEDS⠀
-
-MacroSheds data paper (preprint)
-
-⠀⠀⠀⠀https://eartharxiv.org/repository/view/3499/
 
 ------------------
 Full file contents
@@ -22,7 +26,7 @@ data_use_agreements.docx
 
 ⠀⠀⠀⠀Terms and conditions for using MacroSheds data.
 
-attribution_and_intellectual_rights_ts.xlsx
+attribution_and_intellectual_rights_timeseries.csv
 
 ⠀⠀⠀⠀Specific license requirements and expectations associated with
 
@@ -38,7 +42,7 @@ glossary.txt
 
 timeseries_X.csv
 
-⠀⠀⠀⠀Time-series (streamflow, precip if available, chemistry) for domain X
+⠀⠀⠀⠀Time-series (streamflow, precip if available, chemistry, daily flux) for domain X
 
 ws_attr_summaries.csv
 
@@ -80,18 +84,6 @@ variables_ws_attr_timeseries.csv
 
 ⠀⠀⠀⠀Variable metadata (standard units and definitions) for temporally explicit watershed attributes
 
-variable_category_codes_ws_attr.csv
-
-⠀⠀⠀⠀Watershed attribute category codes (the second letter of the variable
-
-⠀⠀⠀⠀code prefix)
-
-variable_data_source_codes_ws_attr.csv
-
-⠀⠀⠀⠀Watershed attribute data source codes (the first letter of the
-
-⠀⠀⠀⠀variable code prefix)
-
 detection_limits.csv
 
 ⠀⠀⠀⠀Primary data source detection limits
@@ -116,7 +108,7 @@ data_irregularities.csv
 
 ⠀⠀⠀⠀Any notable inconsistencies within the MacroSheds dataset
 
-changelog.txt
+changelog.md
 
 ⠀⠀⠀⠀List of changes made since the last version of the MacroSheds dataset.
 

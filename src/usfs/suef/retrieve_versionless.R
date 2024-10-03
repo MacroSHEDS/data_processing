@@ -9,13 +9,18 @@ prod_info <- get_product_info(network = network,
     filter(grepl(pattern = '^VERSIONLESS',
                  x = prodcode))
 
+if(which(prod_info$prodname == 'precipitation') <
+   which(prod_info$prodname == 'precip_chemistry')){
+    stop('suef pchem must be downloaded before precipitation')
+}
+
 if(! is.null(prodname_filter)){
     prod_info <- filter(prod_info, prodname %in% prodname_filter)
 }
 
 if(nrow(prod_info) == 0) return()
 
-site_code <- 'sitecode_NA'
+site_code <- 'sitename_NA'
 
 for(i in seq_len(nrow(prod_info))){
 
@@ -58,9 +63,11 @@ for(i in seq_len(nrow(prod_info))){
                      p = prodname_ms,
                      s = site_code)
 
-    dir.create(path = dest_dir,
-               showWarnings = FALSE,
-               recursive = TRUE)
+    if(prodname_ms != 'precipitation__VERSIONLESS005'){
+        dir.create(path = dest_dir,
+                   showWarnings = FALSE,
+                   recursive = TRUE)
+    }
 
     retrieve_versionless_product(network = network,
                                  domain = domain,
@@ -76,7 +83,6 @@ for(i in seq_len(nrow(prod_info))){
                               site_code = site_code,
                               new_status = 'pending')
     }
-    # }
 
     gc()
 }

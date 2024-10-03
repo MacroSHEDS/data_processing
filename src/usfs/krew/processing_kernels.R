@@ -172,9 +172,9 @@ process_0_VERSIONLESS003 <- function(set_details, network, domain) {
     return(deets_out)
 }
 
-#ws_boundary: STATUS=READY
+#ws_boundary: STATUS=OBSOLETE
 #. handle_errors
-process_0_VERSIONLESS004 <- function(set_details, network, domain) {
+process_0_VERSIONLESS004 <- function(set_details, network, domain){
 
     loginfo(glue('Nothing to do for {p}',
                  p = set_details$prodname_ms),
@@ -200,7 +200,9 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
                     s = site_code,
                     c = component)
 
-    temp_dir <- tempdir()
+    temp_dir <- file.path(tempdir(), domain)
+    dir.create(temp_dir, recursive = TRUE, showWarnings = FALSE)
+
     unzip(rawfile, exdir = temp_dir)
     fils <- list.files(temp_dir, recursive = T)
 
@@ -222,21 +224,25 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
 
     #DATETIME is messed up cuz of one digit thing
     d <- ms_read_raw_csv(preprocessed_tibble = all_met,
-                         datetime_cols = list('Date' = '%m/%e/%y'),
+                         datetime_cols = c('Date' = '%m/%e/%y'),
                          datetime_tz = 'America/Los_Angeles',
                          site_code_col = 'site',
                          data_cols =  c('PRECIPITATION' = 'precipitation'),
                          data_col_pattern = '#V#',
                          is_sensor = TRUE,
                          set_to_NA = c('-9999', ''),
-                         sampling_type = 'I')
+                         sampling_type = 'I',
+                         keep_empty_rows = TRUE)
 
     d <- ms_cast_and_reflag(d,
-                            varflag_col_pattern = NA)
+                            varflag_col_pattern = NA,
+                            keep_empty_rows = TRUE)
 
     d <- qc_hdetlim_and_uncert(d, prodname_ms = prodname_ms)
 
-    d <- synchronize_timestep(d)
+    d <- synchronize_timestep(d,
+                              admit_NAs = TRUE,
+                              allow_pre_interp = TRUE)
 
     unlink(temp_dir, recursive = TRUE)
 
@@ -270,7 +276,9 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
                     s = site_code,
                     c = component)
 
-    temp_dir <- tempdir()
+    temp_dir <- file.path(tempdir(), domain)
+    dir.create(temp_dir, recursive = TRUE, showWarnings = FALSE)
+
     unzip(rawfile, exdir = temp_dir)
 
     rel_file_path <- paste0(temp_dir, '/', 'Data/Discharge_15Min.csv')
@@ -288,7 +296,7 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
     d <- full_join(d_d, d_f, by = c('Date', 'Time', 'site'))
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('Date' = '%m/%e/%Y',
+                         datetime_cols = c('Date' = '%m/%e/%Y',
                                               'Time' = '%H:%M'),
                          datetime_tz = 'America/Los_Angeles',
                          site_code_col = 'site',
@@ -339,7 +347,9 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
                     s = site_code,
                     c = component)
 
-    temp_dir <- tempdir()
+    temp_dir <- file.path(tempdir(), domain)
+    dir.create(temp_dir, recursive = TRUE, showWarnings = FALSE)
+
     unzip(rawfile, exdir = temp_dir)
     fils <- list.files(temp_dir, recursive = T)
 
@@ -348,7 +358,7 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
     rel_file_path1 <- paste0(temp_dir, '/', relevant_file1)
 
     d <- ms_read_raw_csv(filepath = rel_file_path1,
-                         datetime_cols = list('Date' = '%m/%e/%Y'),
+                         datetime_cols = c('Date' = '%m/%e/%Y'),
                          datetime_tz = 'America/Los_Angeles',
                          site_code_col = 'WS',
                          data_cols =  c('CA' = 'Ca',
@@ -369,7 +379,7 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
     d <- ms_cast_and_reflag(d,
                             varflag_col_pattern = NA)
 
-    d <- ms_conversions(d,
+    d <- ms_conversions_(d,
                         convert_units_from = c('Ca' = 'umol/l',
                                                'Cl' = 'umol/l',
                                                'K' = 'umol/l',
@@ -403,7 +413,7 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
 
     # d_isco <- ms_read_raw_csv(preprocessed_tibble = d_isco,
     d_isco <- ms_read_raw_csv(filepath = rel_file_path2,
-                         datetime_cols = list('SampleDate' = '%m/%e/%Y',
+                         datetime_cols = c('SampleDate' = '%m/%e/%Y',
                                               'SampleTime' = '%H:%M'),
                          datetime_tz = 'America/Los_Angeles',
                          site_code_col = 'SiteID',
@@ -430,7 +440,7 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
                                  variable_flags_dirty = c('Y', 'y'),
                                  variable_flags_to_drop = 'DROP')
 
-    d_isco <- ms_conversions(d_isco,
+    d_isco <- ms_conversions_(d_isco,
                         convert_units_from = c('Ca' = 'umol/l',
                                                'Cl' = 'umol/l',
                                                'K' = 'umol/l',
@@ -484,7 +494,9 @@ process_1_VERSIONLESS004 <- function(network, domain, prodname_ms, site_code, co
                     n = network,
                     d = domain)
 
-    temp_dir <- tempdir()
+    temp_dir <- file.path(tempdir(), domain)
+    dir.create(temp_dir, recursive = TRUE, showWarnings = FALSE)
+
     unzip(rawfile, exdir = temp_dir)
 
     rel_file_path <- paste0(temp_dir, '/', 'Data/Watersheds')
@@ -535,3 +547,7 @@ process_2_ms002 <- precip_gauge_from_site_data
 #precip_pchem_pflux: STATUS=READY
 #. handle_errors
 process_2_ms003 <- derive_precip_pchem_pflux
+
+#stream_gauge_locations: STATUS=READY
+#. handle_errors
+process_2_ms007 <- stream_gauge_from_site_data

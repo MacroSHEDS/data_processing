@@ -160,15 +160,13 @@ process_1_VERSIONLESS000 <- function(network, domain, prodname_ms, site_code, co
                     c = component)
 
     # creating a temporary directory to unzip the folder in
-    temp_dir <- tempdir()
-    dir.create(temp_dir,
-               showWarnings = FALSE,
-               recursive = TRUE)
+    temp_dir <- file.path(tempdir(), domain)
+    dir.create(temp_dir, recursive = TRUE, showWarnings = FALSE)
+
     unzip(rawfile,
           exdir = temp_dir)
 
     # reading in the contents of the extracted folder
-    file_names <- list.files(temp_dir, recursive = TRUE)
     file_paths <- list.files(temp_dir, recursive = TRUE, full.names = TRUE)
 
     # there are many important files in here, but we are only trying to get
@@ -194,20 +192,23 @@ process_1_VERSIONLESS000 <- function(network, domain, prodname_ms, site_code, co
                Sample_Name == "R-29 (PPT@W-9)",
                Precip_Type == 'USFS Durham') %>%
         arrange(Precip_Start) %>%
-        mutate(Sample_Name = case_when(Sample_Name == "R-29 (PPT@W-9)" ~ "R-29", TRUE ~ Sample_Name))
+        mutate(Sample_Name = case_when(Sample_Name == "R-29 (PPT@W-9)" ~ "R-29",
+                                       TRUE ~ Sample_Name))
 
     # read this "preprocssed tibble" into MacroSheds format using ms_read_raw_csv
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('Precip_Collect' = "%Y-%m-%d %H:%M:%S"),
-                         datetime_tz = 'Etc/GMT-5',
+                         datetime_cols = c('Precip_Collect' = "%Y-%m-%d %H:%M:%S"),
+                         datetime_tz = 'Etc/GMT+5',
                          site_code_col = 'Sample_Name',
                          data_cols =  c('Precip_Depth_mm' = 'precipitation'),
                          data_col_pattern = '#V#',
                          is_sensor = FALSE,
-                         sampling_type = 'I')
+                         sampling_type = 'I',
+                         keep_empty_rows = TRUE)
 
     d <- ms_cast_and_reflag(d,
-                            varflag_col_pattern = NA)
+                            varflag_col_pattern = NA,
+                            keep_empty_rows = TRUE)
 
     # apply uncertainty
     d <- ms_check_range(d)
@@ -216,7 +217,10 @@ process_1_VERSIONLESS000 <- function(network, domain, prodname_ms, site_code, co
                                            prodname_ms = prodname_ms,
                                            which_ = 'uncertainty')
 
-    d <- synchronize_timestep(d)
+    d <- synchronize_timestep(d,
+                              admit_NAs = TRUE,
+                              paired_p_and_pchem = TRUE,
+                              allow_pre_interp = TRUE)
 
     sites <- unique(d$site_code)
 
@@ -261,16 +265,16 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
 
     # read this "preprocssed tibble" into MacroSheds format using ms_read_raw_csv
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('Date' = '%m/%d/%y'),
-                         datetime_tz = 'Etc/GMT-5',
+                         datetime_cols = c('Date' = '%m/%d/%y'),
+                         datetime_tz = 'Etc/GMT+5',
                          site_code_col = 'site_code',
                          data_cols =  c('Precip..mm' = 'precipitation'),
                          data_col_pattern = '#V#',
                          ## summary_flagcols = NA,
                          is_sensor = FALSE)
 
-
-    d <- ms_cast_and_reflag(d, varflag_col_pattern = NA)
+    d <- ms_cast_and_reflag(d,
+                            varflag_col_pattern = NA)
 
     # apply uncertainty (no detlim for water volume)
     d <- ms_check_range(d)
@@ -313,15 +317,13 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
                     c = component)
 
     # creating a temporary directory to unzip the folder in
-    temp_dir <- tempdir()
-    dir.create(temp_dir,
-               showWarnings = FALSE,
-               recursive = TRUE)
+    temp_dir <- file.path(tempdir(), domain)
+    dir.create(temp_dir, recursive = TRUE, showWarnings = FALSE)
+
     unzip(rawfile,
           exdir = temp_dir)
 
     # reading in the contents of the extracted folder
-    file_names <- list.files(temp_dir, recursive = TRUE)
     file_paths <- list.files(temp_dir, recursive = TRUE, full.names = TRUE)
 
     # there are many important files in here, but we are only trying to get
@@ -350,13 +352,13 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
 
     # the chemistry name and unit data is all in a named list in domain_helpers
     # I am going to re-pack it here to be just the old_var = new_var structure
-    sleepers_aq_chem = c()
+    sleepers_aq_chem <- c()
 
     for(i in 1:length(sleepers_stream_chem_var_info)) {
-      og_name <- names(sleepers_stream_chem_var_info[i])
-      ms_name <- sleepers_stream_chem_var_info[[i]][3]
+        og_name <- names(sleepers_stream_chem_var_info[i])
+        ms_name <- sleepers_stream_chem_var_info[[i]][3]
 
-      sleepers_aq_chem[og_name] = ms_name
+        sleepers_aq_chem[og_name] = ms_name
     }
 
     # original data has a "summary" flag column, which lists simply a variable name -- meaning
@@ -367,6 +369,7 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
 
     # distribute flags from summary flagcol to variable flagcols
     d <- d %>%
+        as_tibble() %>%
         select(-ends_with("_Lab")) %>%
         mutate(across(Chemistry_Flag:last_col(),
                       .fns = list(
@@ -377,17 +380,19 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
 
     # read this "preprocessed tibble" into MacroSheds format using ms_read_raw_csv
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('Precip_Collect' = "%Y-%m-%d %H:%M:%S"),
-                         datetime_tz = 'Etc/GMT-5',
+                         datetime_cols = c('Precip_Collect' = "%Y-%m-%d %H:%M:%S"),
+                         datetime_tz = 'Etc/GMT+5',
                          site_code_col = 'Sample_Name',
                          data_cols =  sleepers_aq_chem,
                          data_col_pattern = '#V#',
                          var_flagcol_pattern = 'varflag_#V#',
-                         is_sensor = FALSE)
+                         is_sensor = FALSE,
+                         keep_empty_rows = TRUE)
 
     d <- ms_cast_and_reflag(d,
                             variable_flags_dirty = '1',
-                            variable_flags_clean = '0')
+                            variable_flags_clean = '0',
+                            keep_empty_rows = TRUE)
 
     # Sleepers metadata states that all negative values are below detection limit, with the
     # value itself being the detection limit for that sample and method
@@ -420,13 +425,16 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
     sleepers_aq_chem_units_old <- sleepers_aq_chem_units_old[names(sleepers_aq_chem_units_old) %in% drop_var_prefix(d$var)]
     sleepers_aq_chem_units_new <- sleepers_aq_chem_units_new[names(sleepers_aq_chem_units_new) %in% drop_var_prefix(d$var)]
 
-    d <- ms_conversions(d,
+    d <- ms_conversions_(d,
                         convert_units_from = sleepers_aq_chem_units_old,
                         convert_units_to = sleepers_aq_chem_units_new)
 
     d <- qc_hdetlim_and_uncert(d, prodname_ms)
 
-    d <- synchronize_timestep(d)
+    d <- synchronize_timestep(d,
+                              admit_NAs = TRUE,
+                              paired_p_and_pchem = TRUE,
+                              allow_pre_interp = TRUE)
 
     sites <- unique(d$site_code)
 
@@ -493,8 +501,8 @@ process_1_VERSIONLESS003 <- function(network, domain, prodname_ms, site_code, co
         )
 
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('date' = "%Y-%m-%d"),
-                         datetime_tz = 'Etc/GMT-5',
+                         datetime_cols = c('date' = "%Y-%m-%d"),
+                         datetime_tz = 'Etc/GMT+5',
                          site_code_col = 'site_code',
                          data_cols =  c("discharge" = "discharge"),
                          data_col_pattern = '#V#',
@@ -541,15 +549,13 @@ process_1_VERSIONLESS006 <- function(network, domain, prodname_ms, site_code, co
                     c = component)
 
     # creating a temporary directory to unzip the folder in
-    temp_dir <- tempdir()
-    dir.create(temp_dir,
-               showWarnings = FALSE,
-               recursive = TRUE)
+    temp_dir <- file.path(tempdir(), domain)
+    dir.create(temp_dir, recursive = TRUE, showWarnings = FALSE)
+
     unzip(rawfile,
           exdir = temp_dir)
 
     # reading in the contents of the extracted folder
-    file_names <- list.files(temp_dir, recursive = TRUE)
     file_paths <- list.files(temp_dir, recursive = TRUE, full.names = TRUE)
 
     # there are many important files in here, but we are only trying to get
@@ -614,8 +620,8 @@ process_1_VERSIONLESS006 <- function(network, domain, prodname_ms, site_code, co
 
     # read this "preprocessed tibble" into MacroSheds format using ms_read_raw_csv
     d <- ms_read_raw_csv(preprocessed_tibble = d,
-                         datetime_cols = list('Date_Time' = "%Y-%m-%d %H:%M:%S"),
-                         datetime_tz = 'Etc/GMT-5',
+                         datetime_cols = c('Date_Time' = "%Y-%m-%d %H:%M:%S"),
+                         datetime_tz = 'Etc/GMT+5',
                          site_code_col = 'Sample_Name',
                          data_cols =  sleepers_aq_chem,
                          data_col_pattern = '#V#',
@@ -657,7 +663,7 @@ process_1_VERSIONLESS006 <- function(network, domain, prodname_ms, site_code, co
     sleepers_aq_chem_units_old <- sleepers_aq_chem_units_old[names(sleepers_aq_chem_units_old) %in% drop_var_prefix(d$var)]
     sleepers_aq_chem_units_new <- sleepers_aq_chem_units_new[names(sleepers_aq_chem_units_new) %in% drop_var_prefix(d$var)]
 
-    d <- ms_conversions(d,
+    d <- ms_conversions_(d,
                         convert_units_from = sleepers_aq_chem_units_old,
                         convert_units_to = sleepers_aq_chem_units_new)
 
@@ -753,18 +759,22 @@ process_2_ms006 <- function(network, domain, prodname_ms){
                             domain = domain,
                             prodname_ms = qprod)
 
+    if(length(qfiles) > 1) stop('new qfile added. update code below')
+
     flux_sites <- fname_from_fpath(chemfiles, include_fext = FALSE)
 
     for(s in flux_sites){
-        q_ws <- feather::read_feather(qfiles[[1]]) %>%
-            mutate(site_code = s)
-        feather::write_feather(q_ws, qfiles)
+
+        #could def be handled better. also see below.
+        read_feather(qfiles) %>%
+            mutate(site_code = !!s) %>%
+            write_feather(qfiles)
 
         flux <- sw(calc_inst_flux(chemprod = chemprod,
                                   qprod = qprod,
                                   site_code = s))
 
-        if(!is.null(flux)){
+        if(! is.null(flux)){
 
             write_ms_file(d = flux,
                           network = network,
@@ -775,4 +785,8 @@ process_2_ms006 <- function(network, domain, prodname_ms){
                           shapefile = FALSE)
         }
     }
+
+    read_feather(qfiles) %>%
+        mutate(site_code = 'R-29') %>%
+        write_feather(qfiles)
 }

@@ -136,7 +136,7 @@ process_1_VERSIONLESS001 <- function(network, domain, prodname_ms, site_code, co
     # hey! if this kernel is being run again, make sure to check the flag columns
     # in the original data, as there may be new flag info
     d <- ms_read_raw_csv(preprocessed_tibble = raw_xlsx,
-                         datetime_cols = list('Date' = '%Y-%m-%d %H:%M:%S'),
+                         datetime_cols = c('Date' = '%Y-%m-%d %H:%M:%S'),
                          datetime_tz = 'America/Chicago',
                          site_code_col = 'site_code',
                          data_cols =  c('discharge'),
@@ -229,7 +229,7 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
     }
 
     d <- ms_read_raw_csv(preprocessed_tibble =  d,
-                         datetime_cols = list('Date' = '%Y-%m-%d %H:%M:%S'),
+                         datetime_cols = c('Date' = '%Y-%m-%d %H:%M:%S'),
                          datetime_tz = 'America/Chicago',
                          site_code_col = 'site_code',
                          data_cols =  mwo_chem_cols,
@@ -239,7 +239,7 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
                          var_flagcol_pattern = '#V#_varflag'
                          )
 
-    d <- ms_cast_and_reflag(d,
+    d <- ms_cast_and_reflag(d, #verify these work as expected (dirty + bdl). carries clean
                             # will turn the *ms_status* column to 1 (e.g. flagged)
                             variable_flags_dirty   = c('~'),
                             # will turn the *ms_status* column to 2 (e.g. below detection limit)
@@ -280,7 +280,7 @@ process_1_VERSIONLESS002 <- function(network, domain, prodname_ms, site_code, co
       swwd_chem_units_new[ms_name] = ms_units
     }
 
-    d <- ms_conversions(d,
+    d <- ms_conversions_(d,
                         convert_units_from = swwd_chem_units_old,
                         convert_units_to = swwd_chem_units_new)
 
