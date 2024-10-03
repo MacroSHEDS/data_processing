@@ -716,8 +716,7 @@ identify_sampling_bypass <- function(df,
 
 drop_var_prefix <- function(x){
 
-    # unprefixed <- substr(x, 4, nchar(x))
-    unprefixed <- ifelse(substr(x, 3, 3) == '_',
+    unprefixed <- ifelse(grepl('^(?!Ge_)[IGa-z][SNa-z]_.+', x, perl = TRUE),
                          substr(x, 4, nchar(x)),
                          x)
 
@@ -726,8 +725,7 @@ drop_var_prefix <- function(x){
 
 extract_var_prefix <- function(x){
 
-    # prefix <- substr(x, 1, 2)
-    prefix <- ifelse(substr(x, 3, 3) == '_',
+    prefix <- ifelse(grepl('^(?!Ge_)[IGa-z][SNa-z]_.+', x, perl = TRUE),
                      substr(x, 1, 2),
                      x)
 
@@ -11327,14 +11325,25 @@ conform_ws_attr_names <- function(){
         mean_annual_ndvi = 'ndvi_mean',
         mean_annual_evi = 'evi_mean',
         snow_depth_ann_mean = 'snow_depth_mean',
+        snow_depth_ann_max = 'snow_depth_max',
+        snow_depth_ann_min = 'snow_depth_min',
         swe_ann_mean = 'swe_mean',
+        swe_ann_max = 'swe_max',
+        swe_ann_main = 'swe_min',
         temp_mean_median = 'temp_median',
         temp_mean_sd = 'temp_sd'
     )
 
-    univ_codes <- univ_products %>%
-        select(starts_with('data_')) %>%
-        distinct()
+    read_feather('../portal/data/general/biplot/year.feather') %>%
+        mutate(pfx = extract_var_prefix(var),
+               pfx = if_else(pfx == var, '', paste0(pfx, '_')),
+               var = drop_var_prefix(var),
+               var = sub('_space$', '', var),
+               var = sub('^annual_', '', var),
+               var = dplyr::recode(var, !!!var_changes),
+               var = paste0(pfx, var)) %>%
+        select(-pfx) %>%
+        write_feather('../portal/data/general/biplot/year.feather')
 
     attr_ts <- list.files('../portal/data/general/spatial_downloadables',
                           pattern = 'spatial_timeseries',
@@ -11342,9 +11351,7 @@ conform_ws_attr_names <- function(){
 
     for(f in attr_ts){
         trt <- read_csv(f, show_col_types = FALSE) %>%
-            mutate(
-                var = drop_var_prefix(var)
-            ) %>%
+            mutate(var = drop_var_prefix(var)) %>%
             mutate(var = sub('_space$', '', var),
                    var = sub('^annual_', '', var),
                    var = dplyr::recode(var, !!!var_changes)) %>%
@@ -11784,7 +11791,7 @@ manually_edit_eml <- function(){
     ## (and modifying it to accept a password):
     # system(paste0('rsync -avP eml/data_links macrosheds@104.198.40.189:data/macrosheds_v', vsn))
     message(paste(most_recent_eml, 'is compiled and customized. USE THE PREVIEWER BEFORE PUBLISHING!\nhttps://portal.edirepository.org/nis/metadataPreviewer.jsp'))
-    message(glue('Push staging files to server with rsync -avP eml/data_links macrosheds@104.198.40.189:data/macrosheds_v{vsn}'))
+    message(glue('Push staging files to server with rsync -avPhz eml/data_links macrosheds@34.122.13.215:data/macrosheds_v{vsn}'))
 }
 
 make_figshare_docs_skeleton <- function(where){
@@ -17816,15 +17823,12 @@ compute_yearly_summary_ws <- function(){
                default_site = site_code)
 
     all_domain <- tibble()
-    for(i in 1:nrow(df)) {
+    for(i in 1:nrow(df)){
 
         dom <- df$domain[i]
         net <- df$network[i]
 
-        dom_path <- glue('data/{n}/{d}/ws_traits',
-                         n = net,
-                         d = dom)
-
+        dom_path <- glue('data/{net}/{dom}/ws_traits')
         prod_files <- list.files(dom_path,
                                  full.names = TRUE,
                                  recursive = TRUE)
@@ -17835,15 +17839,13 @@ compute_yearly_summary_ws <- function(){
 
         all_prods <- tibble()
         if(length(prod_files) > 0){
-
-            for(p in 1:length(prod_files)) {
+            for(p in 1:length(prod_files)){
 
                 prod_tib <- read_feather(prod_files[p])
                 prod_names <- names(prod_tib)
 
                 if(! 'pctCellErr' %in% prod_names){
-                    prod_tib <- prod_tib %>%
-                        mutate(pctCellErr = NA)
+                    prod_tib <- mutate(prod_tib, pctCellErr = NA)
                 }
 
                 all_prods <- rbind(all_prods, prod_tib)
